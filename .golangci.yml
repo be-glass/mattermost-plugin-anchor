@@ -6,7 +6,7 @@ linters-settings:
   gofmt:
     simplify: true
   goimports:
-    local-prefixes: github.com/glass.plugin-babysteps
+    local-prefixes: github.com/glass.plugin-anchor
   govet:
     check-shadowing: true
     enable-all: true
