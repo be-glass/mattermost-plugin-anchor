@@ -37,6 +37,9 @@ func (p *AnchorPlugin) ExecuteCommand(c *plugin.Context, args *model.CommandArgs
 	case "/channels":
 		response = business.GetChannelsListString(p.API, args.TeamId)
 
+	case "/check":
+		response = business.CheckUserChannelStructureForTeam(p.API, args.TeamId)
+
 	default:
 		response = "Unknown command. Please try something else."
 	}

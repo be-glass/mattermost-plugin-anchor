@@ -9,28 +9,33 @@ func (p *AnchorPlugin) OnActivate() error {
 	commands := []*model.Command{
 		{
 			Trigger:          "hello",
-			AutoComplete:     true,
+			AutoComplete:     false,
 			AutoCompleteDesc: "Respond with a greeting",
 		},
 		{
 			Trigger:          "users",
-			AutoComplete:     true,
+			AutoComplete:     false,
 			AutoCompleteDesc: "List users",
 		},
 		{
 			Trigger:          "channels",
-			AutoComplete:     true,
+			AutoComplete:     false,
 			AutoCompleteDesc: "List channels",
 		},
 		{
 			Trigger:          "teams",
-			AutoComplete:     true,
+			AutoComplete:     false,
 			AutoCompleteDesc: "List teams",
 		},
 		{
 			Trigger:          "cleanup",
-			AutoComplete:     true,
+			AutoComplete:     false,
 			AutoCompleteDesc: "Find and remove unwanted posts",
+		},
+		{
+			Trigger:          "check",
+			AutoComplete:     false,
+			AutoCompleteDesc: "check channel structure of users",
 		},
 	}
 

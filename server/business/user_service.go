@@ -26,8 +26,6 @@ func GetUserListString(api plugin.API) string {
 	}
 }
 
-// private
-
 func listAllUsers(api plugin.API) ([]*model.User, error) {
 	var allUsers []*model.User
 	page := 0
@@ -52,3 +50,5 @@ func listAllUsers(api plugin.API) ([]*model.User, error) {
 
 	return allUsers, nil
 }
+
+// private

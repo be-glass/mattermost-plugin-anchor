@@ -22,13 +22,20 @@ func CleanPosts(api plugin.API, channelID string) string {
 		return fmt.Sprintf("No posts found matching %s .", regex)
 	}
 
-	messages := []string{"Deleting:"}
+	messages := []string{fmt.Sprintf("Deleting %d posts.", len(matches))}
 	for _, message := range matches {
-		err := api.DeletePost(message.Id)
-		if err == nil {
-			result = fmt.Sprintf("Deleted: %s", message.Message)
+
+		DryRun := false
+
+		if DryRun == true {
+			result = fmt.Sprintf("%s: %s", "dry run", message.Message)
 		} else {
-			result = fmt.Sprintf("%s: %s", err.Message, message.Message)
+			err := api.DeletePost(message.Id)
+			if err == nil {
+				result = fmt.Sprintf("Deleted: %s", message.Message)
+			} else {
+				result = fmt.Sprintf("%s: %s", err.Message, message.Message)
+			}
 		}
 
 		messages = append(messages, result)
