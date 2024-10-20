@@ -3,27 +3,7 @@ package main
 import (
 	"fmt"
 	"github.com/mattermost/mattermost/server/public/model"
-	"github.com/mattermost/mattermost/server/public/plugin"
 )
-
-type AnchorPlugin struct {
-	plugin.MattermostPlugin
-	configuration *Configuration // Add this field to store the configuration
-}
-
-//func (p *AnchorPlugin) OnActivate() error {
-//	// Register the /hello command
-//	err := p.API.RegisterCommand(&model.Command{
-//		Trigger:          "hello",
-//		AutoComplete:     true,
-//		AutoCompleteDesc: "Respond with a greeting",
-//		AutoCompleteHint: "",
-//	})
-//	if err != nil {
-//		return err
-//	}
-//	return nil
-//}
 
 func (p *AnchorPlugin) OnActivate() error {
 	commands := []*model.Command{
@@ -33,9 +13,24 @@ func (p *AnchorPlugin) OnActivate() error {
 			AutoCompleteDesc: "Respond with a greeting",
 		},
 		{
-			Trigger:     "users",
-			Description: "List all users",
-			DisplayName: "Users",
+			Trigger:          "users",
+			AutoComplete:     true,
+			AutoCompleteDesc: "List users",
+		},
+		{
+			Trigger:          "channels",
+			AutoComplete:     true,
+			AutoCompleteDesc: "List channels",
+		},
+		{
+			Trigger:          "teams",
+			AutoComplete:     true,
+			AutoCompleteDesc: "List teams",
+		},
+		{
+			Trigger:          "cleanup",
+			AutoComplete:     true,
+			AutoCompleteDesc: "Find and remove unwanted posts",
 		},
 	}
 

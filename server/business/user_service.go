@@ -1,1 +1,54 @@
 package business
+
+import (
+	"fmt"
+	"github.com/mattermost/mattermost/server/public/model"
+	"github.com/mattermost/mattermost/server/public/plugin"
+	"strings"
+)
+
+// public
+
+func GetUserListString(api plugin.API) string {
+
+	users, err := listAllUsers(api)
+
+	if err != nil {
+		return "Don't know!"
+	} else if len(users) == 0 {
+		return "No users"
+	} else {
+		var userNames []string
+		for _, user := range users {
+			userNames = append(userNames, user.Username)
+		}
+		return strings.Join(userNames, "\n")
+	}
+}
+
+// private
+
+func listAllUsers(api plugin.API) ([]*model.User, error) {
+	var allUsers []*model.User
+	page := 0
+	perPage := 50 // number of users per page
+
+	for {
+		users, appErr := api.GetUsers(&model.UserGetOptions{
+			Page:    page,
+			PerPage: perPage,
+		})
+		if appErr != nil {
+			return nil, fmt.Errorf("failed to get users: %w", appErr)
+		}
+
+		if len(users) == 0 {
+			break // no more users to fetch
+		}
+
+		allUsers = append(allUsers, users...)
+		page++
+	}
+
+	return allUsers, nil
+}
