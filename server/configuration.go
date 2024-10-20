@@ -8,12 +8,12 @@ type Configuration struct {
 }
 
 // SetConfiguration applies the given configuration to the plugin.
-func (p *HelloPlugin) SetConfiguration(configuration *Configuration) {
+func (p *AnchorPlugin) SetConfiguration(configuration *Configuration) {
 	p.configuration = configuration
 }
 
 // GetConfiguration retrieves the current configuration for the plugin.
-func (p *HelloPlugin) GetConfiguration() *Configuration {
+func (p *AnchorPlugin) GetConfiguration() *Configuration {
 	if p.configuration == nil {
 		return &Configuration{}
 	}

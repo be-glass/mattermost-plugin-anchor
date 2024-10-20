@@ -6,12 +6,12 @@ import (
 	"github.com/mattermost/mattermost/server/public/plugin"
 )
 
-type HelloPlugin struct {
+type AnchorPlugin struct {
 	plugin.MattermostPlugin
 	configuration *Configuration // Add this field to store the configuration
 }
 
-//func (p *HelloPlugin) OnActivate() error {
+//func (p *AnchorPlugin) OnActivate() error {
 //	// Register the /hello command
 //	err := p.API.RegisterCommand(&model.Command{
 //		Trigger:          "hello",
@@ -25,7 +25,7 @@ type HelloPlugin struct {
 //	return nil
 //}
 
-func (p *HelloPlugin) OnActivate() error {
+func (p *AnchorPlugin) OnActivate() error {
 	commands := []*model.Command{
 		{
 			Trigger:          "hello",
