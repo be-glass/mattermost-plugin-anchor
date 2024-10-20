@@ -5,5 +5,5 @@ import (
 )
 
 func main() {
-	plugin.ClientMain(&HelloPlugin{})
+	plugin.ClientMain(&AnchorPlugin{})
 }
