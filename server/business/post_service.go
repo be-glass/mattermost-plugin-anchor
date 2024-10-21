@@ -8,7 +8,7 @@ import (
 	"strings"
 )
 
-func CleanPosts(api plugin.API, channelID string) string {
+func CleanPosts(api plugin.API, channelID string, DryRun bool) string {
 
 	var result string
 
@@ -24,8 +24,6 @@ func CleanPosts(api plugin.API, channelID string) string {
 
 	messages := []string{fmt.Sprintf("Deleting %d posts.", len(matches))}
 	for _, message := range matches {
-
-		DryRun := false
 
 		if DryRun == true {
 			result = fmt.Sprintf("%s: %s", "dry run", message.Message)

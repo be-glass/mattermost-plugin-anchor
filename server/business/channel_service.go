@@ -8,13 +8,13 @@ import (
 	"strings"
 )
 
-func GetChannelIDByName(api plugin.API, teamID string, channelName string) (string, error) {
-	channel, appErr := api.GetChannelByName(channelName, teamID, false)
-	if appErr != nil {
-		return "", appErr
-	}
-	return channel.Id, nil
-}
+//func GetChannelIDByName(api plugin.API, teamID string, channelName string) (string, error) {
+//	channel, appErr := api.GetChannelByName(channelName, teamID, false)
+//	if appErr != nil {
+//		return "", appErr
+//	}
+//	return channel.Id, nil
+//}
 
 func GetChannelsListString(api plugin.API, teamID string) string {
 	// Get all channels in the given team
@@ -374,4 +374,41 @@ func CheckAndJoinDefaultChannels(api plugin.API, targetUser string, teamId strin
 	}
 
 	return resultBuilder.String()
+}
+
+// CreateDefaultChannels creates default public channels for the given team ID
+func CreateDefaultChannels(api plugin.API, teamID string) string {
+	var result string
+
+	// Loop through the config's PublicChannels map
+	for _, channels := range config.PublicChannels {
+		for _, channelName := range channels {
+			// Define a new channel to create
+			channel := &model.Channel{
+				TeamId:      teamID,
+				Name:        createChannelName(channelName), // Convert name to a valid channel name
+				DisplayName: channelName,
+				Type:        model.ChannelTypeOpen, // Public channel
+			}
+
+			// Create the channel using the Mattermost API
+			_, appErr := api.CreateChannel(channel)
+			if appErr != nil {
+				// If an error occurs, append it to the result and continue
+				result += fmt.Sprintf("Failed to create channel %s: %v\n", channelName, appErr.Error())
+				continue
+			}
+
+			// Append success message to the result
+			result += fmt.Sprintf("Created channel: %s\n", channelName)
+		}
+	}
+
+	return result
+}
+
+// createChannelName converts a string to lowercase and replaces spaces with hyphens
+func createChannelName(name string) string {
+	// Convert to lowercase and replace spaces with hyphens
+	return strings.ReplaceAll(strings.ToLower(name), " ", "-")
 }

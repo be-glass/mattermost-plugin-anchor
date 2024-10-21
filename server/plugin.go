@@ -8,45 +8,11 @@ import (
 func (p *AnchorPlugin) OnActivate() error {
 	commands := []*model.Command{
 		{
-			Trigger:          "hello",
+			Trigger:          "anchor",
 			AutoComplete:     false,
-			AutoCompleteDesc: "Respond with a greeting",
+			AutoCompleteDesc: "plugin commands",
 		},
-		{
-			Trigger:          "users",
-			AutoComplete:     false,
-			AutoCompleteDesc: "List users",
-		},
-		{
-			Trigger:          "channels",
-			AutoComplete:     false,
-			AutoCompleteDesc: "List channels",
-		},
-		{
-			Trigger:          "teams",
-			AutoComplete:     false,
-			AutoCompleteDesc: "List teams",
-		},
-		{
-			Trigger:          "cleanup",
-			AutoComplete:     false,
-			AutoCompleteDesc: "Find and remove unwanted posts",
-		},
-		{
-			Trigger:          "check",
-			AutoComplete:     false,
-			AutoCompleteDesc: "check channel structure of users",
-		},
-		{
-			Trigger:          "debug",
-			AutoComplete:     false,
-			AutoCompleteDesc: "display various information for debugging purposes",
-		},
-		{
-			Trigger:          "onboard",
-			AutoComplete:     false,
-			AutoCompleteDesc: "create or complement default channel structure for given user",
-		}}
+	}
 
 	for _, command := range commands {
 		if err := p.API.RegisterCommand(command); err != nil {

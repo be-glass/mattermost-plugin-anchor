@@ -8,77 +8,80 @@ import (
 	"strings"
 )
 
-func (p *AnchorPlugin) ExecuteCommand(c *plugin.Context, args *model.CommandArgs) (*model.CommandResponse, *model.AppError) {
-
-	p.API.LogWarn("Entering the command section")
-
-	var response string
-
-	// check user - only accept system admin
-	user, appErr := p.API.GetUser(args.UserId)
+func CheckSysAdmin(api plugin.API, userId string) bool {
+	user, appErr := api.GetUser(userId)
 	if appErr != nil {
-		return nil, appErr
+		return false
 	}
 	if !strings.Contains(user.Roles, "system_admin") {
-		return &model.CommandResponse{
-			Text: "You do not have permission to execute this command.",
-		}, nil
+		return false
 	}
+	return true
+}
 
-	//command := strings.TrimSpace(args.Command)
+func (p *AnchorPlugin) ExecuteCommand(c *plugin.Context, args *model.CommandArgs) (*model.CommandResponse, *model.AppError) {
+	return &model.CommandResponse{
+		ResponseType: model.CommandResponseTypeEphemeral,
+		Text:         p.GetCommandResponse(c, args),
+	}, nil
+}
+
+func (p *AnchorPlugin) GetCommandResponse(c *plugin.Context, args *model.CommandArgs) string {
+	_ = c
 	commandArgs := strings.Fields(args.Command)
-	command := commandArgs[0]
+
+	var command, target string
+
+	p.API.LogWarn("XXXX 1")
+
+	if len(commandArgs) < 2 {
+		return "missing a command"
+	}
+	if len(commandArgs) > 1 {
+		command = commandArgs[1]
+	}
+	if len(commandArgs) > 2 {
+		target = commandArgs[2]
+	}
+	if commandArgs[0] != "/anchor" {
+		return fmt.Sprintf("invalid command: %s", commandArgs[0])
+	}
+	if !CheckSysAdmin(p.API, args.UserId) {
+		return fmt.Sprintf("You do not have permission to execute this command.")
+	}
+	p.API.LogWarn("XXXX 2")
 
 	switch command {
 
-	case "/hello":
-		response = fmt.Sprintf("Hello, %s! :) ", args.UserId)
+	case "hello":
+		return fmt.Sprintf("Hello, %s! :) ", args.UserId)
 
-	case "/users":
-		response = business.GetUserListString(p.API)
+	case "users":
+		return business.GetUserListString(p.API)
 
-	case "/cleanup":
-		posts := business.CleanPosts(p.API, args.ChannelId)
+	case "cleanup":
+		return business.CleanPosts(p.API, args.ChannelId, true)
 
-		response = posts
-
-	case "/teams":
-		p.API.LogWarn("found teams command")
-
-		response = business.GetTeamsListString(p.API)
+	case "teams":
+		return business.GetTeamsListString(p.API)
 
 	case "/channels":
-		response = business.GetChannelsListString(p.API, args.TeamId)
+		return business.GetChannelsListString(p.API, args.TeamId)
 
-	case "/check":
+	case "check":
+		return business.CheckUserOrAll(p.API, target, args.TeamId)
 
-		var targetUser string
+	case "onboard":
+		return business.CheckAndJoinDefaultChannels(p.API, target, args.TeamId)
 
-		if len(commandArgs) > 0 {
-			targetUser = commandArgs[1]
-		} else {
-			targetUser = "all"
-		}
+	case "create_channels":
+		return business.CreateDefaultChannels(p.API, args.TeamId)
 
-		response = business.CheckUserOrAll(p.API, targetUser, args.TeamId)
-
-	case "/onboard":
-
-		var targetUser string
-
-		if len(commandArgs) > 0 {
-			targetUser = commandArgs[1]
-		} else {
-			targetUser = "all"
-		}
-
-		response = business.CheckAndJoinDefaultChannels(p.API, targetUser, args.TeamId)
-
-	case "/debug":
+	case "debug":
 
 		actualCategories, _ := business.GetUserSidebarCategoryNames(p.API, args.UserId, args.TeamId)
 
-		response = strings.Join([]string{
+		return strings.Join([]string{
 			"**Default Channels:**",
 			strings.Join(business.GetDefaultChannelNames(), "\n"),
 			"\n**Subscribed Channels**",
@@ -90,12 +93,6 @@ func (p *AnchorPlugin) ExecuteCommand(c *plugin.Context, args *model.CommandArgs
 		}, "\n")
 
 	default:
-		response = "Unknown command. Please try something else."
+		return "Unknown command. Please try something else."
 	}
-
-	return &model.CommandResponse{
-		ResponseType: model.CommandResponseTypeEphemeral,
-		Text:         response,
-	}, nil
-
 }
