@@ -259,7 +259,7 @@ func checkChannelCategorization(api plugin.API, userId string, teamId string) st
 		return "Unable to retrieve user subscribed public channels."
 	}
 
-	// Create a map to hold the expected category for each channel from channelTree
+	// Create a map to hold the expected category for each channel from ChannelTree
 	expectedCategoryMap := make(map[string]string)
 	for category, channels := range config.PublicChannels {
 		for _, channel := range channels {
@@ -270,17 +270,20 @@ func checkChannelCategorization(api plugin.API, userId string, teamId string) st
 	// Create a slice to store any wrongly categorized channels
 	var wronglyCategorized []string
 
-	// Get the user's sidebar categories (to check actual categorization)
-	userCategories, err := GetUserSidebarCategoryNames(api, userId, teamId)
-	if err != nil {
+	// Get the user's actual sidebar categories from the API
+	userSidebarCategories, appErr := api.GetChannelSidebarCategories(userId, teamId)
+	if appErr != nil {
 		return "Unable to retrieve user sidebar categories."
 	}
 
-	// Convert user's sidebar categories to a map for easier lookup
+	// Map actual categories from the sidebar for easier lookup
 	userCategoryMap := make(map[string]string)
-	for _, category := range userCategories {
-		for _, channel := range publicChannels {
-			userCategoryMap[channel.DisplayName] = category // Assuming you can map categories to channels
+	for _, sidebarCategory := range userSidebarCategories.Categories {
+		for _, channelId := range sidebarCategory.Channels {
+			channel, err := api.GetChannel(channelId)
+			if err == nil {
+				userCategoryMap[channel.DisplayName] = sidebarCategory.DisplayName
+			}
 		}
 	}
 
@@ -288,7 +291,7 @@ func checkChannelCategorization(api plugin.API, userId string, teamId string) st
 	for _, channel := range publicChannels {
 		expectedCategory, exists := expectedCategoryMap[channel.DisplayName]
 		if !exists {
-			continue // If the channel is not in the channelTree, skip the check
+			continue // If the channel is not in the ChannelTree, skip the check
 		}
 
 		actualCategory, isCategorized := userCategoryMap[channel.DisplayName]
@@ -299,7 +302,6 @@ func checkChannelCategorization(api plugin.API, userId string, teamId string) st
 
 	// If no channels are wrongly categorized, return a success message
 	if len(wronglyCategorized) == 0 {
-		//return "All channels are categorized correctly."
 		return "."
 	}
 
@@ -321,10 +323,23 @@ func CheckUserOrAll(api plugin.API, targetUser string, teamId string) string {
 	}
 }
 
-func CheckAndJoinDefaultChannels(api plugin.API, target_user string, teamId string) string {
+func GetChannelByDisplayName(api plugin.API, teamId string, displayName string) (*model.Channel, *model.AppError) {
+	// Convert the display name to channel name format
+	channelName := strings.ToLower(strings.ReplaceAll(displayName, " ", "-"))
+
+	// Use the converted name to get the channel
+	channel, appErr := api.GetChannelByNameForTeamName(teamId, channelName, false)
+	if appErr != nil {
+		return nil, appErr // Return error if the channel is not found
+	}
+
+	return channel, nil
+}
+
+func CheckAndJoinDefaultChannels(api plugin.API, targetUser string, teamId string) string {
 	var resultBuilder strings.Builder
 
-	userID, err := GetUserIDByUsername(api, target_user)
+	userID, err := GetUserIDByUsername(api, targetUser)
 	if err != nil {
 		return "Could not find that user"
 	}
@@ -333,11 +348,11 @@ func CheckAndJoinDefaultChannels(api plugin.API, target_user string, teamId stri
 	for category, channels := range config.PublicChannels {
 		resultBuilder.WriteString(fmt.Sprintf("Checking category: %s\n", category))
 
-		for _, channelName := range channels {
+		for _, displayName := range channels {
 			// Get the channel by name and team ID
-			channel, appErr := api.GetChannelByNameForTeamName(teamId, channelName, false)
+			channel, appErr := GetChannelByDisplayName(api, teamId, displayName)
 			if appErr != nil || channel == nil {
-				resultBuilder.WriteString(fmt.Sprintf("Channel not found: %s\n", channelName))
+				resultBuilder.WriteString(fmt.Sprintf("Channel not found: %s\n", displayName))
 				continue
 			}
 
@@ -345,15 +360,15 @@ func CheckAndJoinDefaultChannels(api plugin.API, target_user string, teamId stri
 			_, appErr = api.GetChannelMember(channel.Id, userID)
 			if appErr != nil {
 				// If the user is not a member, add them to the channel
-				resultBuilder.WriteString(fmt.Sprintf("User is not a member of %s. Adding to channel...\n", channelName))
+				resultBuilder.WriteString(fmt.Sprintf("User is not a member of %s. Adding to channel...\n", displayName))
 				_, addErr := api.AddChannelMember(channel.Id, userID)
 				if addErr != nil {
-					resultBuilder.WriteString(fmt.Sprintf("Failed to add user to channel: %s\n", channelName))
+					resultBuilder.WriteString(fmt.Sprintf("Failed to add user to channel: %s\n", displayName))
 				} else {
-					resultBuilder.WriteString(fmt.Sprintf("Successfully added user to channel: %s\n", channelName))
+					resultBuilder.WriteString(fmt.Sprintf("Successfully added user to channel: %s\n", displayName))
 				}
 			} else {
-				resultBuilder.WriteString(fmt.Sprintf("User is already a member of channel: %s\n", channelName))
+				resultBuilder.WriteString(fmt.Sprintf("User is already a member of channel: %s\n", displayName))
 			}
 		}
 	}
