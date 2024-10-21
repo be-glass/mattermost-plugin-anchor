@@ -339,9 +339,16 @@ func GetChannelByDisplayName(api plugin.API, teamId string, displayName string) 
 	return channel, nil
 }
 
+// createChannelName converts a string to lowercase and replaces spaces with hyphens
+func createChannelName(name string) string {
+	// Convert to lowercase and replace spaces with hyphens
+	return strings.ReplaceAll(strings.ToLower(name), " ", "-")
+}
+
 func CheckAndJoinDefaultChannels(api plugin.API, targetUser string, teamId string) string {
 	var resultBuilder strings.Builder
 
+	// Get the user ID based on the target username
 	userID, err := GetUserIDByUsername(api, targetUser)
 	if err != nil {
 		return "Could not find that user"
@@ -351,8 +358,15 @@ func CheckAndJoinDefaultChannels(api plugin.API, targetUser string, teamId strin
 	for category, channels := range config.PublicChannels {
 		resultBuilder.WriteString(fmt.Sprintf("Checking category: %s\n", category))
 
+		// Get or create the sidebar category for the user in the specified team
+		sidebarCategory, err := getOrCreateSidebarCategory(api, userID, teamId, category)
+		if err != nil {
+			resultBuilder.WriteString(fmt.Sprintf("Error managing sidebar category: %s\n", err.Error()))
+			continue
+		}
+
 		for _, displayName := range channels {
-			// Get the channel by name and team ID
+			// Get the channel by display name and team ID
 			channel, appErr := GetChannelByDisplayName(api, teamId, displayName)
 			if appErr != nil || channel == nil {
 				resultBuilder.WriteString(fmt.Sprintf("Channel not found: %s\n", displayName))
@@ -367,11 +381,20 @@ func CheckAndJoinDefaultChannels(api plugin.API, targetUser string, teamId strin
 				_, addErr := api.AddChannelMember(channel.Id, userID)
 				if addErr != nil {
 					resultBuilder.WriteString(fmt.Sprintf("Failed to add user to channel: %s\n", displayName))
+					continue
 				} else {
 					resultBuilder.WriteString(fmt.Sprintf("Successfully added user to channel: %s\n", displayName))
 				}
 			} else {
 				resultBuilder.WriteString(fmt.Sprintf("User is already a member of channel: %s\n", displayName))
+			}
+
+			// Add the channel to the user's sidebar category
+			addToCategoryErr := addChannelToSidebarCategory(api, userID, teamId, sidebarCategory, channel.Id)
+			if addToCategoryErr != nil {
+				resultBuilder.WriteString(fmt.Sprintf("Failed to add channel to sidebar category: %s\n", displayName))
+			} else {
+				resultBuilder.WriteString(fmt.Sprintf("Added channel %s to sidebar category %s\n", displayName, category))
 			}
 		}
 	}
@@ -410,8 +433,66 @@ func CreateDefaultChannels(api plugin.API, teamID string) string {
 	return result
 }
 
-// createChannelName converts a string to lowercase and replaces spaces with hyphens
-func createChannelName(name string) string {
-	// Convert to lowercase and replace spaces with hyphens
-	return strings.ReplaceAll(strings.ToLower(name), " ", "-")
+func getOrCreateSidebarCategory(api plugin.API, userID string, teamID string, categoryName string) (*model.SidebarCategoryWithChannels, error) {
+	// Fetch the user's sidebar categories for the specified team
+	categories, appErr := api.GetChannelSidebarCategories(userID, teamID)
+	if appErr != nil {
+		return nil, appErr
+	}
+
+	// Look for the category by name
+	for _, category := range categories.Categories {
+		if category.DisplayName == categoryName {
+			return category, nil // Return the existing category
+		}
+	}
+
+	// If the category does not exist, create it
+	newCategory := &model.SidebarCategoryWithChannels{
+		SidebarCategory: model.SidebarCategory{
+			UserId:      userID,
+			TeamId:      teamID,
+			DisplayName: categoryName,
+			Type:        model.SidebarCategoryCustom, // Custom category
+		},
+	}
+
+	createdCategory, appErr := api.CreateChannelSidebarCategory(userID, teamID, newCategory)
+	if appErr != nil {
+		return nil, appErr
+	}
+
+	return createdCategory, nil
+}
+
+func addChannelToSidebarCategory(api plugin.API, userID string, teamID string, category *model.SidebarCategoryWithChannels, channelID string) *model.AppError {
+	// Get the current list of channel IDs from the category using ChannelIds()
+	channelIDs := category.ChannelIds()
+
+	// Check if the channel is already in the category
+	for _, existingChannelID := range channelIDs {
+		if existingChannelID == channelID {
+			// Channel is already in the category, no need to update
+			return nil
+		}
+	}
+
+	// Add the channel ID to the list of channel IDs
+	newChannelIDs := append(channelIDs, channelID)
+
+	// Create a new category with the updated channel list
+	updatedCategory := &model.SidebarCategoryWithChannels{
+		SidebarCategory: model.SidebarCategory{
+			Id:          category.Id,
+			UserId:      category.UserId,
+			TeamId:      category.TeamId,
+			DisplayName: category.DisplayName,
+			Type:        category.Type,
+		},
+		Channels: newChannelIDs, // Assign the updated channel list
+	}
+
+	// Update the sidebar category with the new channel list
+	_, appErr := api.UpdateChannelSidebarCategories(userID, teamID, []*model.SidebarCategoryWithChannels{updatedCategory})
+	return appErr
 }
