@@ -328,11 +328,14 @@ func GetChannelByDisplayName(api plugin.API, teamId string, displayName string) 
 	channelName := strings.ToLower(strings.ReplaceAll(displayName, " ", "-"))
 
 	// Use the converted name to get the channel
-	channel, appErr := api.GetChannelByNameForTeamName(teamId, channelName, false)
+	channel, appErr := api.GetChannelByName(teamId, channelName, false)
+
 	if appErr != nil {
+		api.LogWarn("DBG NOT FOUND", displayName, channelName, teamId, appErr)
 		return nil, appErr // Return error if the channel is not found
 	}
 
+	api.LogWarn("DBG Found it :)", displayName, channelName)
 	return channel, nil
 }
 

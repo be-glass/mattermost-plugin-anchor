@@ -65,7 +65,7 @@ func (p *AnchorPlugin) GetCommandResponse(c *plugin.Context, args *model.Command
 	case "teams":
 		return business.GetTeamsListString(p.API)
 
-	case "/channels":
+	case "channels":
 		return business.GetChannelsListString(p.API, args.TeamId)
 
 	case "check":
