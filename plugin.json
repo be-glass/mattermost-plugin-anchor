@@ -1,5 +1,6 @@
 {
   "id": "github.com.glass.plugin-anchor",
+  "version": "0.1.1",
   "name": "Anchor Plugin",
   "description": "Extra functions for ESC",
   "homepage_url": "https://github.com/mattermost/mattermost-plugin-starter-template",

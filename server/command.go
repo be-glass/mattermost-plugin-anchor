@@ -14,7 +14,20 @@ func (p *AnchorPlugin) ExecuteCommand(c *plugin.Context, args *model.CommandArgs
 
 	var response string
 
-	command := strings.TrimSpace(args.Command)
+	// check user - only accept system admin
+	user, appErr := p.API.GetUser(args.UserId)
+	if appErr != nil {
+		return nil, appErr
+	}
+	if !strings.Contains(user.Roles, "system_admin") {
+		return &model.CommandResponse{
+			Text: "You do not have permission to execute this command.",
+		}, nil
+	}
+
+	//command := strings.TrimSpace(args.Command)
+	commandArgs := strings.Fields(args.Command)
+	command := commandArgs[0]
 
 	switch command {
 
@@ -38,7 +51,43 @@ func (p *AnchorPlugin) ExecuteCommand(c *plugin.Context, args *model.CommandArgs
 		response = business.GetChannelsListString(p.API, args.TeamId)
 
 	case "/check":
-		response = business.CheckUserChannelStructureForTeam(p.API, args.TeamId)
+
+		var targetUser string
+
+		if len(commandArgs) > 0 {
+			targetUser = commandArgs[1]
+		} else {
+			targetUser = "all"
+		}
+
+		response = business.CheckUserOrAll(p.API, targetUser, args.TeamId)
+
+	case "/onboard":
+
+		var targetUser string
+
+		if len(commandArgs) > 0 {
+			targetUser = commandArgs[1]
+		} else {
+			targetUser = "all"
+		}
+
+		response = business.CheckAndJoinDefaultChannels(p.API, targetUser, args.TeamId)
+
+	case "/debug":
+
+		actualCategories, _ := business.GetUserSidebarCategoryNames(p.API, args.UserId, args.TeamId)
+
+		response = strings.Join([]string{
+			"**Default Channels:**",
+			strings.Join(business.GetDefaultChannelNames(), "\n"),
+			"\n**Subscribed Channels**",
+			business.GetChannelsListString(p.API, args.TeamId),
+			"\n**Default Categories:**",
+			strings.Join(business.GetDefaultCategoryNames(), "\n"),
+			"\n**Actual Categories:**",
+			strings.Join(actualCategories, "\n"),
+		}, "\n")
 
 	default:
 		response = "Unknown command. Please try something else."

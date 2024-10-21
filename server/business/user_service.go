@@ -51,4 +51,15 @@ func listAllUsers(api plugin.API) ([]*model.User, error) {
 	return allUsers, nil
 }
 
+func GetUserIDByUsername(api plugin.API, username string) (string, *model.AppError) {
+	// Retrieve the user by username
+	user, appErr := api.GetUserByUsername(username)
+	if appErr != nil {
+		return "", appErr // Return error if the user is not found or there is an issue
+	}
+
+	// Return the user's ID
+	return user.Id, nil
+}
+
 // private

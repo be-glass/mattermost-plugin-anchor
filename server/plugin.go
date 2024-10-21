@@ -37,7 +37,16 @@ func (p *AnchorPlugin) OnActivate() error {
 			AutoComplete:     false,
 			AutoCompleteDesc: "check channel structure of users",
 		},
-	}
+		{
+			Trigger:          "debug",
+			AutoComplete:     false,
+			AutoCompleteDesc: "display various information for debugging purposes",
+		},
+		{
+			Trigger:          "onboard",
+			AutoComplete:     false,
+			AutoCompleteDesc: "create or complement default channel structure for given user",
+		}}
 
 	for _, command := range commands {
 		if err := p.API.RegisterCommand(command); err != nil {

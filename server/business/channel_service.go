@@ -29,11 +29,38 @@ func GetChannelsListString(api plugin.API, teamID string) string {
 
 	// Loop through all channels and append their names to the builder
 	for _, channel := range channels {
-		builder.WriteString(fmt.Sprintf("%s\n", channel.Name))
+		builder.WriteString(fmt.Sprintf("%s\n", channel.DisplayName))
 	}
 
 	// Convert the builder to a string and return it
 	return builder.String()
+}
+
+// private
+
+func CheckUserChannelStructure(api plugin.API, userId string, teamId string) string {
+	var resultBuilder strings.Builder
+
+	// Append the user's name to the result
+	user, appErr := api.GetUser(userId)
+	if appErr != nil {
+		return "Unable to retrieve user information."
+	}
+	resultBuilder.WriteString(fmt.Sprintf("User: **%s**\n", user.Username))
+
+	// Call the function to check the sidebar categories
+	sidebarResult := checkUserSidebarCategories(api, userId, teamId)
+	resultBuilder.WriteString(sidebarResult + "\n")
+
+	// Call the function to check the channel subscriptions
+	channelResult := checkChannelSubscription(api, userId, teamId)
+	resultBuilder.WriteString(channelResult + "\n")
+
+	// Call the function to check the channel categorization
+	categorizationResult := checkChannelCategorization(api, userId, teamId)
+	resultBuilder.WriteString(categorizationResult + "\n")
+
+	return resultBuilder.String()
 }
 
 func CheckUserChannelStructureForTeam(api plugin.API, teamId string) string {
@@ -54,34 +81,18 @@ func CheckUserChannelStructureForTeam(api plugin.API, teamId string) string {
 			break
 		}
 
-		// Iterate over the users and check their sidebar categories and channel subscriptions
+		// Iterate over the users and check their channel structure
 		for _, user := range users {
-			// Append the user's name to the result
-			resultBuilder.WriteString(fmt.Sprintf("User: **%s**\n", user.Username))
-
-			// Call the function to check the sidebar categories
-			sidebarResult := checkUserSidebarCategories(api, user.Id, teamId)
-			resultBuilder.WriteString(sidebarResult + "\n")
-
-			// Call the function to check the channel subscriptions
-			channelResult := checkChannelSubscription(api, user.Id, teamId)
-			resultBuilder.WriteString(channelResult + "\n")
-
-			categorizationResult := checkChannelCategorization(api, user.Id, teamId)
-			resultBuilder.WriteString(categorizationResult + "\n")
-
-			resultBuilder.WriteString("\n")
+			userStructureResult := CheckUserChannelStructure(api, user.Id, teamId)
+			resultBuilder.WriteString(userStructureResult + "\n")
 		}
 
 		// Increment the page to get the next set of users
 		page++
 	}
 
-	// Return the accumulated results as a single string
 	return resultBuilder.String()
 }
-
-// private
 
 func getAllChannelsInTeam(api plugin.API, teamID string) ([]*model.Channel, error) {
 	var allChannels []*model.Channel
@@ -110,19 +121,19 @@ func getAllChannelsInTeam(api plugin.API, teamID string) ([]*model.Channel, erro
 	return allChannels, nil
 }
 
-func getDefaultChannelNames() []string {
+func GetDefaultChannelNames() []string {
 	var channels []string
 
-	for _, channelList := range config.ChannelTree {
+	for _, channelList := range config.PublicChannels {
 		channels = append(channels, channelList...)
 	}
 	return channels
 }
 
-func getDefaultCategoryNames() []string {
+func GetDefaultCategoryNames() []string {
 	var categories []string
 
-	for category := range config.ChannelTree {
+	for category := range config.PublicChannels {
 		categories = append(categories, category)
 	}
 	return categories
@@ -181,7 +192,7 @@ func checkChannelSubscription(api plugin.API, userId string, teamId string) stri
 	}
 
 	// Get the default channel names
-	defaultChannelNames := getDefaultChannelNames()
+	defaultChannelNames := GetDefaultChannelNames()
 
 	// Create a slice to accumulate missing channels
 	var missingChannels []string
@@ -218,7 +229,7 @@ func checkUserSidebarCategories(api plugin.API, userId string, teamId string) st
 	}
 
 	// Get the default category names
-	defaultCategoryNames := getDefaultCategoryNames()
+	defaultCategoryNames := GetDefaultCategoryNames()
 
 	// Create a slice to accumulate missing categories
 	var missingCategories []string
@@ -250,7 +261,7 @@ func checkChannelCategorization(api plugin.API, userId string, teamId string) st
 
 	// Create a map to hold the expected category for each channel from channelTree
 	expectedCategoryMap := make(map[string]string)
-	for category, channels := range config.ChannelTree {
+	for category, channels := range config.PublicChannels {
 		for _, channel := range channels {
 			expectedCategoryMap[channel] = category
 		}
@@ -294,4 +305,58 @@ func checkChannelCategorization(api plugin.API, userId string, teamId string) st
 
 	// Return the wrongly categorized channels as a comma-separated string
 	return "Wrongly categorized channels: " + strings.Join(wronglyCategorized, ", ")
+}
+
+func CheckUserOrAll(api plugin.API, targetUser string, teamId string) string {
+
+	if targetUser == "all" {
+		return CheckUserChannelStructureForTeam(api, teamId)
+	} else {
+		userID, err := GetUserIDByUsername(api, targetUser)
+		if err != nil {
+			return "Could not find that user"
+		} else {
+			return CheckUserChannelStructure(api, userID, teamId)
+		}
+	}
+}
+
+func CheckAndJoinDefaultChannels(api plugin.API, target_user string, teamId string) string {
+	var resultBuilder strings.Builder
+
+	userID, err := GetUserIDByUsername(api, target_user)
+	if err != nil {
+		return "Could not find that user"
+	}
+
+	// Loop through the default channel categories and their corresponding channels
+	for category, channels := range config.PublicChannels {
+		resultBuilder.WriteString(fmt.Sprintf("Checking category: %s\n", category))
+
+		for _, channelName := range channels {
+			// Get the channel by name and team ID
+			channel, appErr := api.GetChannelByNameForTeamName(teamId, channelName, false)
+			if appErr != nil || channel == nil {
+				resultBuilder.WriteString(fmt.Sprintf("Channel not found: %s\n", channelName))
+				continue
+			}
+
+			// Check if the user is already a member of the channel
+			_, appErr = api.GetChannelMember(channel.Id, userID)
+			if appErr != nil {
+				// If the user is not a member, add them to the channel
+				resultBuilder.WriteString(fmt.Sprintf("User is not a member of %s. Adding to channel...\n", channelName))
+				_, addErr := api.AddChannelMember(channel.Id, userID)
+				if addErr != nil {
+					resultBuilder.WriteString(fmt.Sprintf("Failed to add user to channel: %s\n", channelName))
+				} else {
+					resultBuilder.WriteString(fmt.Sprintf("Successfully added user to channel: %s\n", channelName))
+				}
+			} else {
+				resultBuilder.WriteString(fmt.Sprintf("User is already a member of channel: %s\n", channelName))
+			}
+		}
+	}
+
+	return resultBuilder.String()
 }
