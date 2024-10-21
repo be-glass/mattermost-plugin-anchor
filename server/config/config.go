@@ -15,3 +15,5 @@ var PrivateChannels = map[string][]string{
 	"Fleet":     {"Fox maintenance and management"},
 	"Training":  {"Instructors", "Training 2024 B", "Training 2024 A", "Training 2023 B"},
 }
+
+var BotToken = "bg68g5ddytgump6xehbdt4c6nw"

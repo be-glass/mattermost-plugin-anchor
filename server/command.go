@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"github.com/glass.plugin-anchor/server/business"
+	"github.com/glass.plugin-anchor/server/config"
 	"github.com/mattermost/mattermost/server/public/model"
 	"github.com/mattermost/mattermost/server/public/plugin"
 	"strings"
@@ -72,10 +73,13 @@ func (p *AnchorPlugin) GetCommandResponse(c *plugin.Context, args *model.Command
 		return business.CheckUserOrAll(p.API, target, args.TeamId)
 
 	case "onboard":
-		return business.CheckAndJoinDefaultChannels(p.API, target, args.TeamId)
+		return business.CheckAndJoinDefaultChannelStructure(p.API, target, args.TeamId)
 
 	case "create_channels":
 		return business.CreateDefaultChannels(p.API, args.TeamId)
+
+	case "delete_sidebar":
+		return business.DeleteAllSidebarCategories(p.API, target, args.TeamId, config.BotToken)
 
 	case "debug":
 
