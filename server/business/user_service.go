@@ -62,4 +62,13 @@ func GetUserIDByUsername(api plugin.API, username string) (string, *model.AppErr
 	return user.Id, nil
 }
 
-// private
+func CheckSysAdmin(api plugin.API, userId string) bool {
+	user, appErr := api.GetUser(userId)
+	if appErr != nil {
+		return false
+	}
+	if !strings.Contains(user.Roles, "system_admin") {
+		return false
+	}
+	return true
+}
