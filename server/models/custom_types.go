@@ -5,10 +5,11 @@ import (
 	"github.com/mattermost/mattermost-server/v6/plugin"
 )
 
-type RestAPI struct {
-	ServerURL string
-	AuthToken string
-	Headers   map[string]string
+type RestAPI interface {
+	Delete(path string) ([]byte, error)
+	Get(path string) ([]byte, error)
+	Post(path string, data interface{}) ([]byte, error)
+	Put(path string, data interface{}) ([]byte, error)
 }
 
 type Context struct {

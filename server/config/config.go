@@ -16,4 +16,12 @@ var PrivateChannels = map[string][]string{
 	"Training":  {"Instructors", "Training 2024 B", "Training 2024 A", "Training 2023 B"},
 }
 
-var BotToken = "bg68g5ddytgump6xehbdt4c6nw"
+var (
+	BotToken  = "bg68g5ddytgump6xehbdt4c6nw"
+	ServerURL = "http://localhost:8065"
+	AuthToken = "your-auth-token"
+	Headers   = map[string]string{
+		"Authorization": "Bearer your-auth-token",
+		"Content-Type":  "application/json",
+	}
+)

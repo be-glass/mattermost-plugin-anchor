@@ -1,6 +1,8 @@
 package main
 
 import (
+	"github.com/glass.plugin-anchor/server/api"
+	"github.com/glass.plugin-anchor/server/config"
 	"github.com/glass.plugin-anchor/server/models"
 	"github.com/mattermost/mattermost-server/v6/model"
 )
@@ -39,7 +41,7 @@ func (p *AnchorPlugin) SetContextFromCommandArgs(args *model.CommandArgs) *model
 
 	// Optionally set other fields
 	p.Context.API = p.API
-	// p.Context.Rest = ... // Set RestAPI if needed
+	p.Context.Rest = api.NewClient(config.ServerURL, config.AuthToken, config.Headers)
 
 	return nil
 }

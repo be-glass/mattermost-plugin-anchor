@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"github.com/glass.plugin-anchor/server/business"
 	"github.com/glass.plugin-anchor/server/config"
-	"github.com/glass.plugin-anchor/server/models"
 	"github.com/mattermost/mattermost-server/v6/model"
 	"github.com/mattermost/mattermost-server/v6/plugin"
 	"strings"
@@ -12,18 +11,18 @@ import (
 
 func (p *AnchorPlugin) ExecuteCommand(c *plugin.Context, args *model.CommandArgs) (*model.CommandResponse, *model.AppError) {
 
-	team, _ := p.API.GetTeam(args.TeamId)
+	var response string
 
-
-	p.Context = &models.Context {
-		Team: team
+	err := p.SetContextFromCommandArgs(args)
+	if err != nil {
+		response = err.DetailedError
+	} else {
+		response = p.GetCommandResponse(c, args)
 	}
-
-
 
 	return &model.CommandResponse{
 		ResponseType: model.CommandResponseTypeEphemeral,
-		Text:         p.GetCommandResponse(c, args),
+		Text:         response,
 	}, nil
 }
 
@@ -32,8 +31,6 @@ func (p *AnchorPlugin) GetCommandResponse(c *plugin.Context, args *model.Command
 	commandArgs := strings.Fields(args.Command)
 
 	var command, target string
-
-	p.API.LogWarn("XXXX 1")
 
 	if len(commandArgs) < 2 {
 		return "missing a command"
@@ -50,7 +47,6 @@ func (p *AnchorPlugin) GetCommandResponse(c *plugin.Context, args *model.Command
 	if !business.CheckSysAdmin(p.API, args.UserId) {
 		return fmt.Sprintf("You do not have permission to execute this command.")
 	}
-	p.API.LogWarn("XXXX 2")
 
 	switch command {
 
