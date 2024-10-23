@@ -17,9 +17,7 @@ var PrivateChannels = map[string][]string{
 }
 
 var (
-	BotToken  = "bg68g5ddytgump6xehbdt4c6nw"
 	ServerURL = "http://localhost:8065"
-	AuthToken = "your-auth-token"
 	Headers   = map[string]string{
 		"Authorization": "Bearer your-auth-token",
 		"Content-Type":  "application/json",

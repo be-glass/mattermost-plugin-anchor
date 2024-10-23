@@ -19,9 +19,13 @@ type Context struct {
 
 	API  plugin.API
 	Rest RestAPI
+
+	Auth Auth
 }
 
 type Auth struct {
 	AuthToken   string
 	SQLPassword string
+	SystemToken string
+	BotToken    string
 }

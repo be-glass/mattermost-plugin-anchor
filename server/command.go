@@ -3,7 +3,6 @@ package main
 import (
 	"fmt"
 	"github.com/glass.plugin-anchor/server/business"
-	"github.com/glass.plugin-anchor/server/config"
 	"github.com/mattermost/mattermost-server/v6/model"
 	"github.com/mattermost/mattermost-server/v6/plugin"
 	"strings"
@@ -17,7 +16,7 @@ func (p *AnchorPlugin) ExecuteCommand(c *plugin.Context, args *model.CommandArgs
 	if err != nil {
 		response = err.DetailedError
 	} else {
-		response = p.GetCommandResponse(c, args)
+		response = p.GetCommandResponse(c, args.Command)
 	}
 
 	return &model.CommandResponse{
@@ -26,66 +25,68 @@ func (p *AnchorPlugin) ExecuteCommand(c *plugin.Context, args *model.CommandArgs
 	}, nil
 }
 
-func (p *AnchorPlugin) GetCommandResponse(c *plugin.Context, args *model.CommandArgs) string {
-	_ = c
-	commandArgs := strings.Fields(args.Command)
+func (p *AnchorPlugin) GetCommandResponse(_ *plugin.Context, commandLine string) string {
+
+	arguments := strings.Fields(commandLine)
 
 	var command, target string
 
-	if len(commandArgs) < 2 {
+	var c = p.Context
+
+	if len(arguments) < 2 {
 		return "missing a command"
 	}
-	if len(commandArgs) > 1 {
-		command = commandArgs[1]
+	if len(arguments) > 1 {
+		command = arguments[1]
 	}
-	if len(commandArgs) > 2 {
-		target = commandArgs[2]
+	if len(arguments) > 2 {
+		target = arguments[2]
 	}
-	if commandArgs[0] != "/anchor" {
-		return fmt.Sprintf("invalid command: %s", commandArgs[0])
+	if arguments[0] != "/anchor" {
+		return fmt.Sprintf("invalid command: %s", arguments[0])
 	}
-	if !business.CheckSysAdmin(p.API, args.UserId) {
+	if !c.User.IsSystemAdmin() {
 		return fmt.Sprintf("You do not have permission to execute this command.")
 	}
 
 	switch command {
 
 	case "hello":
-		return fmt.Sprintf("Hello, %s! :) ", args.UserId)
+		return fmt.Sprintf("Hello, %s! :) ", c.User.GetFullName())
 
 	case "users":
-		return business.GetUserListString(p.API)
+		return business.GetUserListString(c)
 
 	case "cleanup":
-		return business.CleanPosts(p.API, args.ChannelId, true)
+		return business.CleanPosts(c, c.Channel.Id, true)
 
 	case "teams":
-		return business.GetTeamsListString(p.API)
+		return business.GetTeamsListString(c)
 
 	case "channels":
-		return business.GetChannelsListString(p.API, args.TeamId)
+		return business.GetChannelsListString(c)
 
 	case "check":
-		return business.CheckUserOrAll(p.API, target, args.TeamId)
+		return business.CheckUserOrAll(c, target)
 
 	case "onboard":
-		return business.CheckAndJoinDefaultChannelStructure(p.API, target, args.TeamId)
+		return business.CheckAndJoinDefaultChannelStructure(c, target)
 
 	case "create_channels":
-		return business.CreateDefaultChannels(p.API, args.TeamId)
+		return business.CreateDefaultChannels(c)
 
 	case "delete_sidebar":
-		return business.DeleteAllSidebarCategories(p.API, target, args.TeamId, config.BotToken)
+		return business.DeleteAllSidebarCategories(c, target)
 
 	case "debug":
 
-		actualCategories, _ := business.GetUserSidebarCategoryNames(p.API, args.UserId, args.TeamId)
+		actualCategories, _ := business.GetUserSidebarCategoryNames(c, c.User.Id)
 
 		return strings.Join([]string{
 			"**Default Channels:**",
 			strings.Join(business.GetDefaultChannelNames(), "\n"),
 			"\n**Subscribed Channels**",
-			business.GetChannelsListString(p.API, args.TeamId),
+			business.GetChannelsListString(c),
 			"\n**Default Categories:**",
 			strings.Join(business.GetDefaultCategoryNames(), "\n"),
 			"\n**Actual Categories:**",

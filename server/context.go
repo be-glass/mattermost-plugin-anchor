@@ -11,7 +11,7 @@ func (p *AnchorPlugin) SetContextFromCommandArgs(args *model.CommandArgs) *model
 
 	team, appErr := p.API.GetTeam(args.TeamId)
 	if appErr != nil {
-		p.API.LogError("Failed to get team", "teamId", args.TeamId, "error", appErr.Error())
+		p.API.LogError("Failed to get team", "teamId", "error", appErr.Error())
 		return appErr
 	}
 
@@ -41,7 +41,9 @@ func (p *AnchorPlugin) SetContextFromCommandArgs(args *model.CommandArgs) *model
 
 	// Optionally set other fields
 	p.Context.API = p.API
-	p.Context.Rest = api.NewClient(config.ServerURL, config.AuthToken, config.Headers)
+	p.Context.Auth = config.AuthConfig
+	p.Context.
+		p.Context.Rest = api.NewRestClient(config.ServerURL, p.Context.Auth.AuthToken, config.Headers)
 
 	return nil
 }

@@ -8,7 +8,7 @@ import (
 	"net/http"
 )
 
-func NewClient(serverURL, authToken string, headers map[string]string) *RestClient {
+func NewRestClient(serverURL, authToken string, headers map[string]string) *RestClient {
 	return &RestClient{
 		ServerURL: serverURL,
 		AuthToken: authToken,
