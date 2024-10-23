@@ -4,8 +4,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/glass.plugin-anchor/server/config"
-	"github.com/mattermost/mattermost/server/public/model"
-	"github.com/mattermost/mattermost/server/public/plugin"
+	"github.com/glass.plugin-anchor/server/models"
+	"github.com/mattermost/mattermost-server/v6/model"
+	"github.com/mattermost/mattermost-server/v6/plugin"
 	"io/ioutil"
 	"net/http"
 	"strings"
@@ -382,7 +383,7 @@ func parseCategories(body []byte) ([]*model.SidebarCategoryWithChannels, error) 
 	return categories, nil
 }
 
-func (api *MattermostAPI) DeleteUserCategory(userID, teamID, categoryID string) ([]byte, error) {
-	path := fmt.Sprintf("users/%s/teams/%s/channels/categories/%s", userID, teamID, categoryID)
-	return api.Delete(path)
+func DeleteUserCategory(c models.Context, userID, categoryID string) ([]byte, error) {
+	path := fmt.Sprintf("users/%s/teams/%s/channels/categories/%s", userID, c.Team.Id, categoryID)
+	return c.Rest.Delete(path)
 }

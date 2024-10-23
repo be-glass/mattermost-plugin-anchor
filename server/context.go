@@ -2,7 +2,7 @@ package main
 
 import (
 	"github.com/glass.plugin-anchor/server/models"
-	"github.com/mattermost/mattermost/server/public/model"
+	"github.com/mattermost/mattermost-server/v6/model"
 )
 
 func (p *AnchorPlugin) SetContextFromCommandArgs(args *model.CommandArgs) *model.AppError {

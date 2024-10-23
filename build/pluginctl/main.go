@@ -10,7 +10,7 @@ import (
 	"os"
 	"time"
 
-	"github.com/mattermost/mattermost/server/public/model"
+	"github.com/mattermost/mattermost-server/v6/model"
 )
 
 const commandTimeout = 120 * time.Second
@@ -102,7 +102,7 @@ func getClient(ctx context.Context) (*model.Client4, error) {
 	if adminUsername != "" && adminPassword != "" {
 		client := model.NewAPIv4Client(siteURL)
 		log.Printf("Authenticating as %s against %s.", adminUsername, siteURL)
-		_, _, err := client.Login(ctx, adminUsername, adminPassword)
+		_, _, err := client.Login(adminUsername, adminPassword)
 		if err != nil {
 			return nil, fmt.Errorf("failed to login as %s: %w", adminUsername, err)
 		}
@@ -132,13 +132,13 @@ func deploy(ctx context.Context, client *model.Client4, pluginID, bundlePath str
 	defer pluginBundle.Close()
 
 	log.Print("Uploading plugin via API.")
-	_, _, err = client.UploadPluginForced(ctx, pluginBundle)
+	_, _, err = client.UploadPluginForced(pluginBundle)
 	if err != nil {
 		return fmt.Errorf("failed to upload plugin bundle: %s", err.Error())
 	}
 
 	log.Print("Enabling plugin.")
-	_, err = client.EnablePlugin(ctx, pluginID)
+	_, err = client.EnablePlugin(pluginID)
 	if err != nil {
 		return fmt.Errorf("failed to enable plugin: %s", err.Error())
 	}
@@ -149,7 +149,7 @@ func deploy(ctx context.Context, client *model.Client4, pluginID, bundlePath str
 // disablePlugin attempts to disable the plugin via the Client4 API.
 func disablePlugin(ctx context.Context, client *model.Client4, pluginID string) error {
 	log.Print("Disabling plugin.")
-	_, err := client.DisablePlugin(ctx, pluginID)
+	_, err := client.DisablePlugin(pluginID)
 	if err != nil {
 		return fmt.Errorf("failed to disable plugin: %w", err)
 	}
@@ -160,7 +160,7 @@ func disablePlugin(ctx context.Context, client *model.Client4, pluginID string) 
 // enablePlugin attempts to enable the plugin via the Client4 API.
 func enablePlugin(ctx context.Context, client *model.Client4, pluginID string) error {
 	log.Print("Enabling plugin.")
-	_, err := client.EnablePlugin(ctx, pluginID)
+	_, err := client.EnablePlugin(pluginID)
 	if err != nil {
 		return fmt.Errorf("failed to enable plugin: %w", err)
 	}

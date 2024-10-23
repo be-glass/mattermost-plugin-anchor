@@ -5,8 +5,8 @@ import (
 	"github.com/glass.plugin-anchor/server/business"
 	"github.com/glass.plugin-anchor/server/config"
 	"github.com/glass.plugin-anchor/server/models"
-	"github.com/mattermost/mattermost/server/public/model"
-	"github.com/mattermost/mattermost/server/public/plugin"
+	"github.com/mattermost/mattermost-server/v6/model"
+	"github.com/mattermost/mattermost-server/v6/plugin"
 	"strings"
 )
 
