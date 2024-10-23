@@ -43,7 +43,7 @@ func (p *AnchorPlugin) SetContextFromCommandArgs(args *model.CommandArgs) *model
 	p.Context.API = p.API
 	p.Context.Auth = config.AuthConfig
 	p.Context.
-		p.Context.Rest = api.NewRestClient(config.ServerURL, p.Context.Auth.AuthToken, config.Headers)
+	//TODO	p.Context.Rest = api.NewRestClient(config.ServerURL, p.Context.Auth.AuthToken, config.Headers)
 
 	return nil
 }

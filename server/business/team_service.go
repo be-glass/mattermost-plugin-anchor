@@ -6,13 +6,13 @@ import (
 	"strings"
 )
 
-func GetTeamIDByName(c *models.Context, teamName string) (string, error) {
-	team, appErr := c.API.GetTeamByName(teamName)
-	if appErr != nil {
-		return "", appErr
-	}
-	return team.Id, nil
-}
+//func GetTeamIDByName(c *models.Context, teamName string) (string, error) {
+//	team, appErr := c.API.GetTeamByName(teamName)
+//	if appErr != nil {
+//		return "", appErr
+//	}
+//	return team.Id, nil
+//}
 
 func GetTeamsListString(c *models.Context) string {
 
