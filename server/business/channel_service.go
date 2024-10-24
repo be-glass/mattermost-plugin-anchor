@@ -8,14 +8,6 @@ import (
 	"strings"
 )
 
-//func GetChannelIDByName(c *models.Context, channelName string) (string, error) {
-//	channel, appErr := c.API.GetChannelByName(channelName, teamID, false)
-//	if appErr != nil {
-//		return "", appErr
-//	}
-//	return channel.Id, nil
-//}
-
 func GetChannelsListString(c *models.Context) string {
 	// Get all channels in the given team
 	channels, err := getAllChannelsInTeam(c)
@@ -38,31 +30,6 @@ func GetChannelsListString(c *models.Context) string {
 
 // private
 
-func CheckUserChannelStructure(c *models.Context, userId string) string {
-	var resultBuilder strings.Builder
-
-	// Append the user's name to the result
-	user, appErr := c.API.GetUser(userId)
-	if appErr != nil {
-		return "Unable to retrieve user information."
-	}
-	resultBuilder.WriteString(fmt.Sprintf("User: **%s**\n", user.Username))
-
-	// Call the function to check the sidebar categories
-	sidebarResult := checkUserSidebarCategories(c, userId)
-	resultBuilder.WriteString(sidebarResult + "\n")
-
-	// Call the function to check the channel subscriptions
-	channelResult := checkChannelSubscription(c, userId)
-	resultBuilder.WriteString(channelResult + "\n")
-
-	// Call the function to check the channel categorization
-	categorizationResult := checkChannelCategorization(c, userId)
-	resultBuilder.WriteString(categorizationResult + "\n")
-
-	return resultBuilder.String()
-}
-
 func CheckUserChannelStructureForTeam(c *models.Context) string {
 	var resultBuilder strings.Builder
 
@@ -83,7 +50,8 @@ func CheckUserChannelStructureForTeam(c *models.Context) string {
 
 		// Iterate over the users and check their channel structure
 		for _, user := range users {
-			userStructureResult := CheckUserChannelStructure(c, user.Id)
+			u := WrapUser(user)
+			userStructureResult := u.CheckUserChannelStructure(c)
 			resultBuilder.WriteString(userStructureResult + "\n")
 		}
 
@@ -139,79 +107,6 @@ func GetDefaultCategoryNames() []string {
 	return categories
 }
 
-func GetUserSubscribedPublicChannels(c *models.Context, userId string) ([]*model.Channel, error) {
-	var publicChannels []*model.Channel
-
-	// Get all public channels for the team
-	channels, appErr := c.API.GetPublicChannelsForTeam(c.Team.Id, 0, 10000) // Adjust the limit if necessary
-	if appErr != nil {
-		return nil, appErr
-	}
-
-	// Iterate over the channels and check if the user is a member of the public channel
-	for _, channel := range channels {
-		if channel.Type == model.ChannelTypeOpen { // Public channel type
-			_, memberErr := c.API.GetChannelMember(channel.Id, userId)
-			if memberErr == nil { // If the user is a member, add to the list
-				publicChannels = append(publicChannels, channel)
-			}
-		}
-	}
-
-	return publicChannels, nil
-}
-
-func checkChannelSubscription(c *models.Context, userId string) string {
-	// Get the list of public channels the user is subscribed to
-	publicChannels, err := GetUserSubscribedPublicChannels(c, userId)
-	if err != nil {
-		return "Unable to retrieve user subscribed public channels."
-	}
-
-	// Convert the list of public channel names the user is subscribed to into a map for easier lookup
-	subscribedChannelNames := make(map[string]bool)
-	for _, channel := range publicChannels {
-		subscribedChannelNames[channel.DisplayName] = true
-	}
-
-	// Get the default channel names
-	defaultChannelNames := GetDefaultChannelNames()
-
-	// Create a slice to accumulate missing channels
-	var missingChannels []string
-
-	// Check if all default channels are present in the user's subscribed public channels
-	for _, defaultChannel := range defaultChannelNames {
-		if !subscribedChannelNames[defaultChannel] {
-			missingChannels = append(missingChannels, defaultChannel)
-		}
-	}
-
-	// If no channels are missing, return a success message
-	if len(missingChannels) == 0 {
-		//return "User is subscribed to all required channels."
-		return "."
-
-	}
-
-	// Return the missing channels as a comma-separated string
-	return "Missing required channels: " + strings.Join(missingChannels, ", ")
-}
-
-func CheckUserOrAll(c *models.Context, targetUser string) string {
-
-	if targetUser == "all" {
-		return CheckUserChannelStructureForTeam(c)
-	} else {
-		userID, err := GetUserIDByUsername(c, targetUser)
-		if err != nil {
-			return "Could not find that user"
-		} else {
-			return CheckUserChannelStructure(c, userID)
-		}
-	}
-}
-
 func GetChannelByDisplayName(c *models.Context, displayName string) (*model.Channel, *model.AppError) {
 	// Convert the display name to channel name format
 	channelName := strings.ToLower(strings.ReplaceAll(displayName, " ", "-"))
@@ -263,37 +158,4 @@ func CreateDefaultChannels(c *models.Context) string {
 	}
 
 	return result
-}
-
-func AddUserToMissingChannels(c *models.Context, userID string, categoryChannels map[string][]string) string {
-	var resultBuilder strings.Builder
-
-	// Loop through the categories and their corresponding channels
-	for _, channels := range categoryChannels {
-		for _, displayName := range channels {
-			// Get the channel by display name and team ID
-			channel, appErr := GetChannelByDisplayName(c, displayName)
-			if appErr != nil || channel == nil {
-				resultBuilder.WriteString(fmt.Sprintf("Channel not found: %s\n", displayName))
-				continue
-			}
-
-			// Check if the user is already a member of the channel
-			_, appErr = c.API.GetChannelMember(channel.Id, userID)
-			if appErr != nil {
-				// If the user is not a member, add them to the channel
-				resultBuilder.WriteString(fmt.Sprintf("User is not a member of %s. Adding to channel...\n", displayName))
-				_, addErr := c.API.AddChannelMember(channel.Id, userID)
-				if addErr != nil {
-					resultBuilder.WriteString(fmt.Sprintf("Failed to add user to channel: %s\n", displayName))
-				} else {
-					resultBuilder.WriteString(fmt.Sprintf("Successfully added user to channel: %s\n", displayName))
-				}
-			} else {
-				resultBuilder.WriteString(fmt.Sprintf("User is already a member of channel: %s\n", displayName))
-			}
-		}
-	}
-
-	return resultBuilder.String()
 }

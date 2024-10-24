@@ -29,7 +29,9 @@ func (p *AnchorPlugin) GetCommandResponse(_ *plugin.Context, commandLine string)
 
 	arguments := strings.Fields(commandLine)
 
-	var command, target string
+	var command string
+	var user *business.User
+	var err error
 
 	var c = p.Context
 
@@ -40,7 +42,10 @@ func (p *AnchorPlugin) GetCommandResponse(_ *plugin.Context, commandLine string)
 		command = arguments[1]
 	}
 	if len(arguments) > 2 {
-		target = arguments[2]
+		user, err = business.NewUser(c, arguments[2])
+		if err != nil {
+			return err.Error()
+		}
 	}
 	if arguments[0] != "/anchor" {
 		return fmt.Sprintf("invalid command: %s", arguments[0])
@@ -52,7 +57,8 @@ func (p *AnchorPlugin) GetCommandResponse(_ *plugin.Context, commandLine string)
 	switch command {
 
 	case "hello":
-		return fmt.Sprintf("Hello, %s! :) ", c.User.GetFullName())
+		return fmt.Sprintf("Hello, %s! :) ",
+			c.User.GetFullName())
 
 	case "users":
 		return business.GetUserListString(c)
@@ -67,20 +73,20 @@ func (p *AnchorPlugin) GetCommandResponse(_ *plugin.Context, commandLine string)
 		return business.GetChannelsListString(c)
 
 	case "check":
-		return business.CheckUserOrAll(c, target)
+		return user.CheckUserOrAll(c)
 
 	case "onboard":
-		return business.CheckAndJoinDefaultChannelStructure(c, target)
+		return user.CheckAndJoinDefaultChannelStructure(c)
 
 	case "create_channels":
 		return business.CreateDefaultChannels(c)
 
 	case "delete_sidebar":
-		return business.DeleteAllSidebarCategories(c, target)
+		return user.DeleteAllSidebarCategories(c)
 
 	case "debug":
 
-		actualCategories, _ := business.GetUserSidebarCategoryNames(c, c.User.Id)
+		actualCategories, _ := user.GetUserSidebarCategoryNames(c)
 
 		return strings.Join([]string{
 			"**Default Channels:**",
