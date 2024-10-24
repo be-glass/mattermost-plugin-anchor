@@ -4,15 +4,16 @@ import (
 	"fmt"
 	"github.com/glass.plugin-anchor/server/config"
 	"github.com/glass.plugin-anchor/server/models"
+	"github.com/glass.plugin-anchor/server/utils"
 	"github.com/mattermost/mattermost-server/v6/model"
 	"strings"
 )
 
-func GetUserSidebarCategoryNames(c *models.Context, userId string) ([]string, error) {
+func (u *User) GetUserSidebarCategoryNames(c *models.Context) ([]string, error) {
 	var categories []string
 
 	// Use the Plugin API to get the sidebar categories for the user and team
-	sidebarCategories, appErr := c.API.GetChannelSidebarCategories(userId, c.Team.Id)
+	sidebarCategories, appErr := c.API.GetChannelSidebarCategories(u.Id, c.Team.Id)
 	if appErr != nil {
 		return nil, appErr
 	}
@@ -25,9 +26,9 @@ func GetUserSidebarCategoryNames(c *models.Context, userId string) ([]string, er
 	return categories, nil
 }
 
-func checkUserSidebarCategories(c *models.Context, userId string) string {
+func (u *User) checkUserSidebarCategories(c *models.Context) string {
 	// Get the list of category names in the user's sidebar for the given team
-	userCategories, err := GetUserSidebarCategoryNames(c, userId)
+	userCategories, err := u.GetUserSidebarCategoryNames(c)
 	if err != nil {
 		return "Unable to retrieve user sidebar categories."
 	}
@@ -62,9 +63,9 @@ func checkUserSidebarCategories(c *models.Context, userId string) string {
 	return "Missing required categories: " + strings.Join(missingCategories, ", ")
 }
 
-func checkChannelCategorization(c *models.Context, userId string) string {
+func (u *User) checkChannelCategorization(c *models.Context) string {
 	// Get the list of public channels the user is subscribed to
-	publicChannels, err := GetUserSubscribedPublicChannels(c, userId)
+	publicChannels, err := u.GetUserSubscribedPublicChannels(c)
 	if err != nil {
 		return "Unable to retrieve user subscribed public channels."
 	}
@@ -81,7 +82,7 @@ func checkChannelCategorization(c *models.Context, userId string) string {
 	var wronglyCategorized []string
 
 	// Get the user's actual sidebar categories from the API
-	userSidebarCategories, appErr := c.API.GetChannelSidebarCategories(userId, c.Team.Id)
+	userSidebarCategories, appErr := c.API.GetChannelSidebarCategories(u.Id, c.Team.Id)
 	if appErr != nil {
 		return "Unable to retrieve user sidebar categories."
 	}
@@ -119,9 +120,9 @@ func checkChannelCategorization(c *models.Context, userId string) string {
 	return "Wrongly categorized channels: " + strings.Join(wronglyCategorized, ", ")
 }
 
-func getOrCreateSidebarCategory(c *models.Context, userID string, categoryName string) (*model.SidebarCategoryWithChannels, error) {
+func (u *User) getOrCreateSidebarCategory(c *models.Context, categoryName string) (*model.SidebarCategoryWithChannels, error) {
 	// Fetch the user's sidebar categories for the specified team
-	categories, appErr := c.API.GetChannelSidebarCategories(userID, c.Team.Id)
+	categories, appErr := c.API.GetChannelSidebarCategories(u.Id, c.Team.Id)
 	if appErr != nil {
 		return nil, appErr
 	}
@@ -136,14 +137,14 @@ func getOrCreateSidebarCategory(c *models.Context, userID string, categoryName s
 	// If the category does not exist, create it
 	newCategory := &model.SidebarCategoryWithChannels{
 		SidebarCategory: model.SidebarCategory{
-			UserId:      userID,
+			UserId:      u.Id,
 			TeamId:      c.Team.Id,
 			DisplayName: categoryName,
 			Type:        model.SidebarCategoryCustom, // Custom category
 		},
 	}
 
-	createdCategory, appErr := c.API.CreateChannelSidebarCategory(userID, c.Team.Id, newCategory)
+	createdCategory, appErr := c.API.CreateChannelSidebarCategory(u.Id, c.Team.Id, newCategory)
 	if appErr != nil {
 		return nil, appErr
 	}
@@ -151,7 +152,7 @@ func getOrCreateSidebarCategory(c *models.Context, userID string, categoryName s
 	return createdCategory, nil
 }
 
-func addChannelToSidebarCategory(c *models.Context, userID string, category *model.SidebarCategoryWithChannels, channelID string) *model.AppError {
+func (u *User) addChannelToSidebarCategory(c *models.Context, category *model.SidebarCategoryWithChannels, channelID string) *model.AppError {
 	// Get the current list of channel IDs from the category using ChannelIds()
 	channelIDs := category.ChannelIds()
 
@@ -179,55 +180,82 @@ func addChannelToSidebarCategory(c *models.Context, userID string, category *mod
 	}
 
 	// Update the sidebar category with the new channel list
-	_, appErr := c.API.UpdateChannelSidebarCategories(userID, c.Team.Id, []*model.SidebarCategoryWithChannels{updatedCategory})
+	_, appErr := c.API.UpdateChannelSidebarCategories(u.Id, c.Team.Id, []*model.SidebarCategoryWithChannels{updatedCategory})
 	return appErr
 }
 
-func CheckAndJoinDefaultChannelStructure(c *models.Context, targetUser string) string {
+func (u *User) CheckAndJoinDefaultChannelStructure(c *models.Context) string {
 	var resultBuilder strings.Builder
 
-	// Get the user ID based on the target username
-	userID, err := GetUserIDByUsername(c, targetUser)
-	if err != nil {
-		return "Could not find that user"
-	}
-
 	// Add user to missing channels
-	resultBuilder.WriteString(AddUserToMissingChannels(c, userID, config.PublicChannels))
+	resultBuilder.WriteString(u.AddUserToMissingChannels(c, config.PublicChannels))
 
 	// Create missing sidebar categories
-	sidebarCategories := createMissingSidebarCategories(c, userID, config.PublicChannels)
+	sidebarCategories := u.createMissingSidebarCategories(c, config.PublicChannels)
 
 	// Assign channels to the created categories
-	resultBuilder.WriteString(assignChannelsToCategories(c, userID, sidebarCategories, config.PublicChannels))
+	resultBuilder.WriteString(u.assignChannelsToCategories(c, sidebarCategories, config.PublicChannels))
 
 	// Reorder sidebar categories based on the order in config.PublicChannels
 	categoryOrder := make([]string, 0, len(config.PublicChannels))
 	for category := range config.PublicChannels {
 		categoryOrder = append(categoryOrder, category)
 	}
-	resultBuilder.WriteString(reorderSidebarCategories(c, userID, categoryOrder))
+	resultBuilder.WriteString(u.reorderSidebarCategories(c, categoryOrder))
 
 	return resultBuilder.String()
 }
 
-func createMissingSidebarCategories(c *models.Context, userID string, categoryChannels map[string][]string) map[string]*model.SidebarCategoryWithChannels {
+func (u *User) createMissingSidebarCategories(c *models.Context, categoryChannels map[string][]string) map[string]*model.SidebarCategoryWithChannels {
 	sidebarCategories := make(map[string]*model.SidebarCategoryWithChannels)
+	var orderedCategories []*model.SidebarCategoryWithChannels
 
-	for category := range categoryChannels {
+	// Iterate over the categories in the order defined in PublicChannels
+	for category, channels := range categoryChannels {
 		// Get or create the sidebar category for the user in the specified team
-		sidebarCategory, err := getOrCreateSidebarCategory(c, userID, category)
+		sidebarCategory, err := u.getOrCreateSidebarCategory(c, category)
 		if err != nil {
 			continue
 		}
 
-		// Store the category for later use in assigning channels
+		// Create a slice to hold the channel IDs
+		var channelIDs []string
+
+		// Populate the slice with channel IDs by fetching them using their names
+		for _, channelName := range channels {
+			channel, appErr := c.API.GetChannelByNameForTeamName(c.Team.Name, channelName, false)
+			if appErr != nil {
+				// Log or handle the error, but skip this channel if it fails
+				continue
+			}
+			channelIDs = append(channelIDs, channel.Id)
+		}
+
+		// Update the category's channel list with the appropriate channel IDs
+		sidebarCategory.Channels = channelIDs
+
+		// Store the category in the result map for returning later
 		sidebarCategories[category] = sidebarCategory
+
+		// Append the category to the ordered list to apply all at once
+		orderedCategories = append(orderedCategories, sidebarCategory)
+	}
+
+	// Reverse the ordered categories slice
+	for i, j := 0, len(orderedCategories)-1; i < j; i, j = i+1, j-1 {
+		orderedCategories[i], orderedCategories[j] = orderedCategories[j], orderedCategories[i]
+	}
+
+	// Now, apply all the created/retrieved categories in one batch API call
+	_, appErr := c.API.UpdateChannelSidebarCategories(u.Id, c.Team.Id, orderedCategories)
+	if appErr != nil {
+		// Handle error (logging, etc.)
 	}
 
 	return sidebarCategories
 }
-func assignChannelsToCategories(c *models.Context, userID string, sidebarCategories map[string]*model.SidebarCategoryWithChannels, categoryChannels map[string][]string) string {
+
+func (u *User) assignChannelsToCategories(c *models.Context, sidebarCategories map[string]*model.SidebarCategoryWithChannels, categoryChannels map[string][]string) string {
 	var resultBuilder strings.Builder
 
 	// Loop through the categories and assign channels
@@ -269,7 +297,7 @@ func assignChannelsToCategories(c *models.Context, userID string, sidebarCategor
 		}
 
 		// Apply the batch update
-		_, appErr := c.API.UpdateChannelSidebarCategories(userID, c.Team.Id, []*model.SidebarCategoryWithChannels{sidebarCategoryWithUpdatedChannels})
+		_, appErr := c.API.UpdateChannelSidebarCategories(u.Id, c.Team.Id, []*model.SidebarCategoryWithChannels{sidebarCategoryWithUpdatedChannels})
 		if appErr != nil {
 			resultBuilder.WriteString(fmt.Sprintf("Failed to update sidebar category %s: %s\n", category, appErr.Error()))
 		} else {
@@ -280,11 +308,11 @@ func assignChannelsToCategories(c *models.Context, userID string, sidebarCategor
 	return resultBuilder.String()
 }
 
-func reorderSidebarCategories(c *models.Context, userID string, categoryOrder []string) string {
+func (u *User) reorderSidebarCategories(c *models.Context, categoryOrder []string) string {
 	var resultBuilder strings.Builder
 
 	// Get the current sidebar categories for the user
-	sidebarCategories, appErr := c.API.GetChannelSidebarCategories(userID, c.Team.Id)
+	sidebarCategories, appErr := c.API.GetChannelSidebarCategories(u.Id, c.Team.Id)
 	if appErr != nil {
 		resultBuilder.WriteString(fmt.Sprintf("Failed to retrieve sidebar categories: %s\n", appErr.Error()))
 		return resultBuilder.String()
@@ -307,7 +335,7 @@ func reorderSidebarCategories(c *models.Context, userID string, categoryOrder []
 	}
 
 	// Apply the batch update with the reordered categories
-	_, appErr = c.API.UpdateChannelSidebarCategories(userID, c.Team.Id, orderedCategories)
+	_, appErr = c.API.UpdateChannelSidebarCategories(u.Id, c.Team.Id, orderedCategories)
 	if appErr != nil {
 		resultBuilder.WriteString(fmt.Sprintf("Failed to reorder sidebar categories: %s\n", appErr.Error()))
 	} else {
@@ -317,28 +345,23 @@ func reorderSidebarCategories(c *models.Context, userID string, categoryOrder []
 	return resultBuilder.String()
 }
 
-func DeleteAllSidebarCategories(c *models.Context, userName string) string {
+func (u *User) DeleteAllSidebarCategories(c *models.Context) string {
 
 	var names = []string{"Deleting... "}
 
-	userId, err := GetUserIDByUsername(c, userName)
-	if err != nil {
-		return err.DetailedError
-	}
-
-	sidebarCategories, appErr := c.API.GetChannelSidebarCategories(userId, c.Team.Id)
+	sidebarCategories, appErr := c.API.GetChannelSidebarCategories(u.Id, c.Team.Id)
 	if appErr != nil {
 		return appErr.DetailedError
 	}
 
 	for _, category := range sidebarCategories.Categories {
 
-		if contains(config.DefaultCategories, category.DisplayName) {
+		if utils.Contains(config.DefaultCategories, category.DisplayName) {
 			continue
 		}
 
 		names = append(names, category.DisplayName)
-		_, err := DeleteUserCategory(c, userId, category.Id)
+		_, err := u.DeleteUserCategory(c, category.Id)
 		if err != nil {
 			names = append(names, fmt.Sprintf("Could not delete **%s** because **%s**\n", category.DisplayName, err.Error()))
 		}
@@ -348,16 +371,12 @@ func DeleteAllSidebarCategories(c *models.Context, userName string) string {
 
 }
 
-func DeleteUserCategory(c *models.Context, userID, categoryID string) ([]byte, error) {
-	path := fmt.Sprintf("users/%s/teams/%s/channels/categories/%s", userID, c.Team.Id, categoryID)
+func (u *User) DeleteUserCategory(c *models.Context, categoryID string) ([]byte, error) {
+	path := fmt.Sprintf("users/%s/teams/%s/channels/categories/%s", u.Id, c.Team.Id, categoryID)
 	return c.Rest.Delete(path)
 }
 
-func contains(slice []string, item string) bool {
-	for _, v := range slice {
-		if v == item {
-			return true
-		}
-	}
-	return false
+func (u *User) SetUserCategoryOrder(c *models.Context, categoryIDsOrdered []string) ([]byte, error) {
+	path := fmt.Sprintf("users/%s/teams/%s/channels/categories/order", u.Id, c.Team.Id)
+	return c.Rest.Put(path, categoryIDsOrdered)
 }

@@ -8,6 +8,13 @@ import (
 	"net/http"
 )
 
+type RestClient struct {
+	ServerURL string
+	AuthToken string
+	Headers   map[string]string
+	Client    *http.Client
+}
+
 func NewRestClient(serverURL, authToken string, headers map[string]string) *RestClient {
 	return &RestClient{
 		ServerURL: serverURL,
@@ -17,18 +24,7 @@ func NewRestClient(serverURL, authToken string, headers map[string]string) *Rest
 	}
 }
 
-type RestClient struct {
-	ServerURL string
-	AuthToken string
-	Headers   map[string]string
-	Client    *http.Client
-}
-
-func (r *RestClient) endpointURL(path string) string {
-	return fmt.Sprintf("%s/api/v4/%s", r.ServerURL, path)
-}
-
-func (r *RestClient) check(response *http.Response) ([]byte, error) {
+func check(response *http.Response) ([]byte, error) {
 	if response != nil && (response.StatusCode == http.StatusOK || response.StatusCode == http.StatusCreated) {
 		body, err := io.ReadAll(response.Body)
 		if err != nil {
@@ -42,6 +38,12 @@ func (r *RestClient) check(response *http.Response) ([]byte, error) {
 		fmt.Println("Error - No response.")
 		return nil, fmt.Errorf("no response from server")
 	}
+}
+
+// members
+
+func (r *RestClient) endpointURL(path string) string {
+	return fmt.Sprintf("%s/api/v4/%s", r.ServerURL, path)
 }
 
 func (r *RestClient) Get(path string) ([]byte, error) {
@@ -63,7 +65,7 @@ func (r *RestClient) Get(path string) ([]byte, error) {
 		}
 	}(resp.Body)
 
-	return r.check(resp)
+	return check(resp)
 }
 
 func (r *RestClient) Post(path string, data interface{}) ([]byte, error) {
@@ -86,7 +88,7 @@ func (r *RestClient) Post(path string, data interface{}) ([]byte, error) {
 		}
 	}(resp.Body)
 
-	return r.check(resp)
+	return check(resp)
 }
 
 func (r *RestClient) Delete(path string) ([]byte, error) {
@@ -108,7 +110,7 @@ func (r *RestClient) Delete(path string) ([]byte, error) {
 		}
 	}(resp.Body)
 
-	return r.check(resp)
+	return check(resp)
 }
 
 func (r *RestClient) Put(path string, data interface{}) ([]byte, error) {
@@ -131,5 +133,5 @@ func (r *RestClient) Put(path string, data interface{}) ([]byte, error) {
 		}
 	}(resp.Body)
 
-	return r.check(resp)
+	return check(resp)
 }
