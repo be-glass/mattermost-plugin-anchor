@@ -2,21 +2,21 @@ package business
 
 import (
 	"fmt"
-	"github.com/mattermost/mattermost/server/public/model"
-	"github.com/mattermost/mattermost/server/public/plugin"
+	"github.com/glass.plugin-anchor/server/models"
+	"github.com/mattermost/mattermost-server/v6/model"
 	"regexp"
 	"strings"
 )
 
-func CleanPosts(api plugin.API, channelID string, DryRun bool) string {
+func CleanPosts(c *models.Context, channelID string, DryRun bool) string {
 
 	var result string
 
 	regex := "added to the channel by \\w+.$"
 
-	matches, err3 := findPostsMatchingRegex(api, channelID, regex)
+	matches, err3 := findPostsMatchingRegex(c, channelID, regex)
 
-	api.LogWarn("Found matching posts:", "number", len(matches))
+	c.API.LogWarn("Found matching posts:", "number", len(matches))
 
 	if err3 != nil {
 		return fmt.Sprintf("No posts found matching %s .", regex)
@@ -28,7 +28,7 @@ func CleanPosts(api plugin.API, channelID string, DryRun bool) string {
 		if DryRun == true {
 			result = fmt.Sprintf("%s: %s", "dry run", message.Message)
 		} else {
-			err := api.DeletePost(message.Id)
+			err := c.API.DeletePost(message.Id)
 			if err == nil {
 				result = fmt.Sprintf("Deleted: %s", message.Message)
 			} else {
@@ -44,7 +44,7 @@ func CleanPosts(api plugin.API, channelID string, DryRun bool) string {
 
 // private
 
-func findPostsMatchingRegex(api plugin.API, channelID string, regexPattern string) ([]*model.Post, error) {
+func findPostsMatchingRegex(c *models.Context, channelID string, regexPattern string) ([]*model.Post, error) {
 	// Compile the regular expression
 	regex, err := regexp.Compile(regexPattern)
 	if err != nil {
@@ -55,7 +55,7 @@ func findPostsMatchingRegex(api plugin.API, channelID string, regexPattern strin
 	var matchingPosts []*model.Post
 
 	// Retrieve posts from the channel
-	postList, appErr := api.GetPostsForChannel(channelID, 0, 1000) // Adjust limit based on needs
+	postList, appErr := c.API.GetPostsForChannel(channelID, 0, 1000) // Adjust limit based on needs
 	if appErr != nil {
 		return nil, appErr
 	}

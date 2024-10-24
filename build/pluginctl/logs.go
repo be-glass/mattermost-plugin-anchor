@@ -11,7 +11,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/mattermost/mattermost/server/public/model"
+	"github.com/mattermost/mattermost-server/v6/model"
 )
 
 const (
@@ -109,7 +109,7 @@ func checkOldestEntry(logs []string, oldest string) ([]string, string, bool) {
 // fetchLogs fetches log entries from Mattermost
 // and filters them based on pluginID and timestamp.
 func fetchLogs(ctx context.Context, client *model.Client4, page, perPage int, pluginID string, since time.Time) ([]string, error) {
-	logs, _, err := client.GetLogs(ctx, page, perPage)
+	logs, _, err := client.GetLogs(page, perPage)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get logs from Mattermost: %w", err)
 	}
@@ -173,7 +173,7 @@ func printLogEntries(entries []string) error {
 }
 
 func checkJSONLogsSetting(ctx context.Context, client *model.Client4) error {
-	cfg, _, err := client.GetConfig(ctx)
+	cfg, _, err := client.GetConfig()
 	if err != nil {
 		return fmt.Errorf("failed to fetch config: %w", err)
 	}

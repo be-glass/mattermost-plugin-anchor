@@ -2,8 +2,15 @@ package main
 
 import (
 	"fmt"
-	"github.com/mattermost/mattermost/server/public/model"
+	"github.com/glass.plugin-anchor/server/models"
+	"github.com/mattermost/mattermost-server/v6/model"
+	"github.com/mattermost/mattermost-server/v6/plugin"
 )
+
+type AnchorPlugin struct {
+	plugin.MattermostPlugin
+	Context *models.Context
+}
 
 func (p *AnchorPlugin) OnActivate() error {
 	commands := []*model.Command{

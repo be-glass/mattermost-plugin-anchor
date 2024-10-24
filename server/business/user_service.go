@@ -2,16 +2,16 @@ package business
 
 import (
 	"fmt"
-	"github.com/mattermost/mattermost/server/public/model"
-	"github.com/mattermost/mattermost/server/public/plugin"
+	"github.com/glass.plugin-anchor/server/models"
+	"github.com/mattermost/mattermost-server/v6/model"
 	"strings"
 )
 
 // public
 
-func GetUserListString(api plugin.API) string {
+func GetUserListString(c *models.Context) string {
 
-	users, err := listAllUsers(api)
+	users, err := listAllUsers(c)
 
 	if err != nil {
 		return "Don't know!"
@@ -26,13 +26,13 @@ func GetUserListString(api plugin.API) string {
 	}
 }
 
-func listAllUsers(api plugin.API) ([]*model.User, error) {
+func listAllUsers(c *models.Context) ([]*model.User, error) {
 	var allUsers []*model.User
 	page := 0
 	perPage := 50 // number of users per page
 
 	for {
-		users, appErr := api.GetUsers(&model.UserGetOptions{
+		users, appErr := c.API.GetUsers(&model.UserGetOptions{
 			Page:    page,
 			PerPage: perPage,
 		})
@@ -51,9 +51,9 @@ func listAllUsers(api plugin.API) ([]*model.User, error) {
 	return allUsers, nil
 }
 
-func GetUserIDByUsername(api plugin.API, username string) (string, *model.AppError) {
+func GetUserIDByUsername(c *models.Context, username string) (string, *model.AppError) {
 	// Retrieve the user by username
-	user, appErr := api.GetUserByUsername(username)
+	user, appErr := c.API.GetUserByUsername(username)
 	if appErr != nil {
 		return "", appErr // Return error if the user is not found or there is an issue
 	}
@@ -61,5 +61,3 @@ func GetUserIDByUsername(api plugin.API, username string) (string, *model.AppErr
 	// Return the user's ID
 	return user.Id, nil
 }
-
-// private

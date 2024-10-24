@@ -1,26 +1,26 @@
 package business
 
 import (
-	"github.com/mattermost/mattermost/server/public/model"
-	"github.com/mattermost/mattermost/server/public/plugin"
+	"github.com/glass.plugin-anchor/server/models"
+	"github.com/mattermost/mattermost-server/v6/model"
 	"strings"
 )
 
-func GetTeamIDByName(api plugin.API, teamName string) (string, error) {
-	team, appErr := api.GetTeamByName(teamName)
-	if appErr != nil {
-		return "", appErr
-	}
-	return team.Id, nil
-}
+//func GetTeamIDByName(c *models.Context, teamName string) (string, error) {
+//	team, appErr := c.API.GetTeamByName(teamName)
+//	if appErr != nil {
+//		return "", appErr
+//	}
+//	return team.Id, nil
+//}
 
-func GetTeamsListString(api plugin.API) string {
+func GetTeamsListString(c *models.Context) string {
 
-	api.LogWarn("1")
+	c.API.LogWarn("1")
 
-	teams, err := listAllTeams(api)
+	teams, err := listAllTeams(c)
 
-	api.LogWarn("2")
+	c.API.LogWarn("2")
 
 	if err != nil {
 		return "Don't know!"
@@ -37,10 +37,10 @@ func GetTeamsListString(api plugin.API) string {
 
 // private
 
-func listAllTeams(api plugin.API) ([]*model.Team, error) {
+func listAllTeams(c *models.Context) ([]*model.Team, error) {
 
 	// Fetch teams for the current page
-	teams, appErr := api.GetTeams()
+	teams, appErr := c.API.GetTeams()
 	if appErr != nil {
 		return nil, appErr
 	}
