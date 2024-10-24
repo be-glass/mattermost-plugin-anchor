@@ -332,10 +332,15 @@ func DeleteAllSidebarCategories(c *models.Context, userName string) string {
 	}
 
 	for _, category := range sidebarCategories.Categories {
+
+		if contains(config.DefaultCategories, category.DisplayName) {
+			continue
+		}
+
 		names = append(names, category.DisplayName)
 		_, err := DeleteUserCategory(c, userId, category.Id)
 		if err != nil {
-			names = append(names, fmt.Sprintf("Could not delete %s because %s\n", category.DisplayName, err.Error()))
+			names = append(names, fmt.Sprintf("Could not delete **%s** because **%s**\n", category.DisplayName, err.Error()))
 		}
 	}
 
@@ -346,4 +351,13 @@ func DeleteAllSidebarCategories(c *models.Context, userName string) string {
 func DeleteUserCategory(c *models.Context, userID, categoryID string) ([]byte, error) {
 	path := fmt.Sprintf("users/%s/teams/%s/channels/categories/%s", userID, c.Team.Id, categoryID)
 	return c.Rest.Delete(path)
+}
+
+func contains(slice []string, item string) bool {
+	for _, v := range slice {
+		if v == item {
+			return true
+		}
+	}
+	return false
 }

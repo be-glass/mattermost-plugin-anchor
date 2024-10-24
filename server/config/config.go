@@ -16,10 +16,12 @@ var PrivateChannels = map[string][]string{
 	"Training":  {"Instructors", "Training 2024 B", "Training 2024 A", "Training 2023 B"},
 }
 
+var DefaultCategories = []string{"Favorites", "Channels", "Direct Messages"} // cannot delete them
+
 var (
 	ServerURL = "http://localhost:8065"
 	Headers   = map[string]string{
-		"Authorization": "Bearer your-auth-token",
+		"Authorization": "Bearer " + AuthConfig.AuthToken,
 		"Content-Type":  "application/json",
 	}
 )
