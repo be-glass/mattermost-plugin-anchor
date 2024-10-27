@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"github.com/glass.plugin-anchor/server/business"
+	"github.com/glass.plugin-anchor/server/config"
 	"github.com/mattermost/mattermost-server/v6/model"
 	"github.com/mattermost/mattermost-server/v6/plugin"
 	"strings"
@@ -31,27 +32,29 @@ func (p *AnchorPlugin) GetCommandResponse(_ *plugin.Context, commandLine string)
 
 	var command string
 	var user *business.User
+	var team *business.Team
 	var err error
 
 	var c = p.Context
 
+	if arguments[0] != "/anchor" {
+		return fmt.Sprintf("invalid command: %s", arguments[0])
+	}
+	if !c.User.IsSystemAdmin() {
+		return fmt.Sprintf("You do not have permission to execute this command.")
+	}
 	if len(arguments) < 2 {
 		return "missing a command"
 	}
 	if len(arguments) > 1 {
 		command = arguments[1]
+		team = business.WrapTeam(*c, c.Team)
 	}
 	if len(arguments) > 2 {
 		user, err = business.NewUser(c, arguments[2])
 		if err != nil {
 			return err.Error()
 		}
-	}
-	if arguments[0] != "/anchor" {
-		return fmt.Sprintf("invalid command: %s", arguments[0])
-	}
-	if !c.User.IsSystemAdmin() {
-		return fmt.Sprintf("You do not have permission to execute this command.")
 	}
 
 	switch command {
@@ -70,31 +73,52 @@ func (p *AnchorPlugin) GetCommandResponse(_ *plugin.Context, commandLine string)
 		return business.GetTeamsListString(c)
 
 	case "channels":
-		return business.GetChannelsListString(c)
+		return team.GetChannelsListString()
 
 	case "check":
-		return user.CheckUserOrAll(c)
+		if user != nil {
+			return user.CheckChannelStructure()
+		} else {
+			return team.CheckUserChannelStructure()
+		}
 
 	case "onboard":
-		return user.CheckAndJoinDefaultChannelStructure(c)
+		if user == nil {
+			return "Missing user name"
+		}
+		return user.CheckAndJoinDefaultChannelStructure()
 
 	case "create_channels":
-		return business.CreateDefaultChannels(c)
+		return team.CreateDefaultChannels()
 
 	case "delete_sidebar":
-		return user.DeleteAllSidebarCategories(c)
+		if user == nil {
+			return "Missing user name"
+		}
+		return user.DeleteAllSidebarCategories()
 
 	case "debug":
 
-		actualCategories, _ := user.GetUserSidebarCategoryNames(c)
+		if user == nil {
+			return "Missing user name"
+		}
+
+		if user.C == nil {
+			return "BS"
+		}
+
+		actualCategories, err := user.SidebarCategoryNames()
+		if err != nil {
+			return err.Error()
+		}
 
 		return strings.Join([]string{
 			"**Default Channels:**",
-			strings.Join(business.GetDefaultChannelNames(), "\n"),
+			strings.Join(config.ChannelNames(), "\n"),
 			"\n**Subscribed Channels**",
-			business.GetChannelsListString(c),
+			team.GetChannelsListString(),
 			"\n**Default Categories:**",
-			strings.Join(business.GetDefaultCategoryNames(), "\n"),
+			strings.Join(config.CategoryNames(), "\n"),
 			"\n**Actual Categories:**",
 			strings.Join(actualCategories, "\n"),
 		}, "\n")
