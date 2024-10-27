@@ -19,6 +19,11 @@ func (p *AnchorPlugin) OnActivate() error {
 			AutoComplete:     false,
 			AutoCompleteDesc: "plugin commands",
 		},
+		{
+			Trigger:          "q",
+			AutoComplete:     false,
+			AutoCompleteDesc: "plugin commands",
+		},
 	}
 
 	for _, command := range commands {

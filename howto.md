@@ -8,3 +8,7 @@ cd /home/boris/GolandProjects/mattermost-plugin-development/webapp
 make run
 
 http://localhost:8065/
+
+
+
+echo "0" > /proc/sys/kernel/yama/ptrace_scope

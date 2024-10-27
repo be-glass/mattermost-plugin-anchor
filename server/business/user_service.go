@@ -9,7 +9,7 @@ import (
 )
 
 type User struct {
-	C *models.Context
+	c *models.Context
 	*model.User
 }
 
@@ -24,7 +24,7 @@ func NewUser(c *models.Context, userName string) (*User, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &User{C: c, User: user}, nil
+	return &User{c: c, User: user}, nil
 }
 
 // static
@@ -73,21 +73,11 @@ func listAllUsers(c *models.Context) ([]*model.User, error) {
 
 // members
 
-func (u *User) CheckChannelStructure() string {
-
-	return fmt.Sprintf("User: **%s** (%s):\n%s\n%s\n%s\n",
-		u.Username,
-		u.GetFullName(),
-		u.checkSidebarCategories(),
-		u.checkChannelSubscription(),
-		u.checkChannelCategorization())
-}
-
 func (u *User) GetSubscribedPublicChannels() ([]*model.Channel, error) {
 	var publicChannels []*model.Channel
 
 	// Get all public channels for the team
-	channels, appErr := u.C.API.GetPublicChannelsForTeam(u.C.Team.Id, 0, 10000) // Adjust the limit if necessary
+	channels, appErr := u.c.API.GetPublicChannelsForTeam(u.c.Team.Id, 0, 10000) // Adjust the limit if necessary
 	if appErr != nil {
 		return nil, appErr
 	}
@@ -95,7 +85,7 @@ func (u *User) GetSubscribedPublicChannels() ([]*model.Channel, error) {
 	// Iterate over the channels and check if the user is a member of the public channel
 	for _, channel := range channels {
 		if channel.Type == model.ChannelTypeOpen { // Public channel type
-			_, memberErr := u.C.API.GetChannelMember(channel.Id, u.Id)
+			_, memberErr := u.c.API.GetChannelMember(channel.Id, u.Id)
 			if memberErr == nil { // If the user is a member, add to the list
 				publicChannels = append(publicChannels, channel)
 			}
@@ -149,18 +139,18 @@ func (u *User) JoinMissingChannels(categoryChannels map[string][]string) string 
 	for _, channels := range categoryChannels {
 		for _, displayName := range channels {
 			// Get the channel by display name and team ID
-			channel, appErr := GetChannelByDisplayName(u.C, displayName)
+			channel, appErr := GetChannelByDisplayName(u.c, displayName)
 			if appErr != nil || channel == nil {
 				resultBuilder.WriteString(fmt.Sprintf("Channel not found: %s\n", displayName))
 				continue
 			}
 
 			// Check if the user is already a member of the channel
-			_, appErr = u.C.API.GetChannelMember(channel.Id, u.Id)
+			_, appErr = u.c.API.GetChannelMember(channel.Id, u.Id)
 			if appErr != nil {
 				// If the user is not a member, add them to the channel
 				resultBuilder.WriteString(fmt.Sprintf("User is not a member of %s. Adding to channel...\n", displayName))
-				_, addErr := u.C.API.AddChannelMember(channel.Id, u.Id)
+				_, addErr := u.c.API.AddChannelMember(channel.Id, u.Id)
 				if addErr != nil {
 					resultBuilder.WriteString(fmt.Sprintf("Failed to add user to channel: %s\n", displayName))
 				} else {

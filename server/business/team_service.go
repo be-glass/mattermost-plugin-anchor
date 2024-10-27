@@ -9,13 +9,13 @@ import (
 )
 
 type Team struct {
-	c models.Context
+	c *models.Context
 	*model.Team
 }
 
 // Constructors
 
-func WrapTeam(c models.Context, team *model.Team) *Team {
+func WrapTeam(c *models.Context, team *model.Team) *Team {
 	return &Team{c, team}
 }
 
@@ -82,8 +82,12 @@ func (t *Team) CheckUserChannelStructure() string {
 		}
 
 		for _, user := range users {
-			u := WrapUser(&t.c, user)
-			userStructureResult := u.CheckChannelStructure()
+			u := WrapUser(t.c, user)
+			s, err := NewSideBar(u)
+			if err != nil {
+				return fmt.Sprintf("Error creating side-bar: %v", err)
+			}
+			userStructureResult := s.CheckChannelStructure()
 			resultBuilder.WriteString(userStructureResult + "\n")
 		}
 

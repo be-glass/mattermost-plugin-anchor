@@ -1,9 +1,11 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"github.com/glass.plugin-anchor/server/business"
 	"github.com/glass.plugin-anchor/server/config"
+	"github.com/glass.plugin-anchor/server/models"
 	"github.com/mattermost/mattermost-server/v6/model"
 	"github.com/mattermost/mattermost-server/v6/plugin"
 	"strings"
@@ -26,35 +28,83 @@ func (p *AnchorPlugin) ExecuteCommand(c *plugin.Context, args *model.CommandArgs
 	}, nil
 }
 
-func (p *AnchorPlugin) GetCommandResponse(_ *plugin.Context, commandLine string) string {
+func checkCommand(c *models.Context, line string) error {
+	arguments := strings.Fields(line)
 
-	arguments := strings.Fields(commandLine)
+	if arguments[0] != "/anchor" && arguments[0] != "/q" {
+		return errors.New("invalid command: " + arguments[0])
+	}
+	if !c.User.IsSystemAdmin() {
+		return errors.New("You do not have permission to execute this command.")
+	}
+	if arguments[0] == "/q" {
+		return nil
+	}
+	if len(arguments) < 2 {
+		return errors.New("missing a command")
+	}
 
+	return nil
+}
+
+func parseCommand(c *models.Context, line string) (string, *business.Team, *business.User, *business.SideBar, error) {
+
+	var err error
 	var command string
 	var user *business.User
-	var team *business.Team
-	var err error
+	var sidebar *business.SideBar
+	var team = business.WrapTeam(c, c.Team)
+
+	err = checkCommand(c, line)
+	if err != nil {
+		return "", nil, nil, nil, err
+	}
+
+	arguments := strings.Fields(line)
+
+	switch arguments[0] {
+
+	case "/q":
+
+		user, err = business.NewUser(c, "boris")
+		if err != nil {
+			return "", nil, nil, nil, err
+		}
+		command = "reorder"
+		sidebar, err = business.NewSideBar(user)
+		if err != nil {
+			return "", nil, nil, nil, err
+		}
+
+	case "/anchor":
+
+		command = arguments[1]
+
+		if len(arguments) > 2 {
+			user, err = business.NewUser(c, arguments[2])
+			if err != nil {
+				return "", nil, nil, nil, err
+			}
+			sidebar, err = business.NewSideBar(user)
+			if err != nil {
+				return "", nil, nil, nil, err
+			}
+		}
+	default:
+		return "", nil, nil, nil, errors.New("no valid command recognized")
+	}
+
+	return command, team, user, sidebar, err
+
+}
+
+func (p *AnchorPlugin) GetCommandResponse(_ *plugin.Context, commandLine string) string {
 
 	var c = p.Context
 
-	if arguments[0] != "/anchor" {
-		return fmt.Sprintf("invalid command: %s", arguments[0])
-	}
-	if !c.User.IsSystemAdmin() {
-		return fmt.Sprintf("You do not have permission to execute this command.")
-	}
-	if len(arguments) < 2 {
-		return "missing a command"
-	}
-	if len(arguments) > 1 {
-		command = arguments[1]
-		team = business.WrapTeam(*c, c.Team)
-	}
-	if len(arguments) > 2 {
-		user, err = business.NewUser(c, arguments[2])
-		if err != nil {
-			return err.Error()
-		}
+	command, team, user, sideBar, err := parseCommand(p.Context, commandLine)
+	if err != nil {
+		return err.Error()
 	}
 
 	switch command {
@@ -77,7 +127,7 @@ func (p *AnchorPlugin) GetCommandResponse(_ *plugin.Context, commandLine string)
 
 	case "check":
 		if user != nil {
-			return user.CheckChannelStructure()
+			return sideBar.CheckChannelStructure()
 		} else {
 			return team.CheckUserChannelStructure()
 		}
@@ -86,7 +136,7 @@ func (p *AnchorPlugin) GetCommandResponse(_ *plugin.Context, commandLine string)
 		if user == nil {
 			return "Missing user name"
 		}
-		return user.CheckAndJoinDefaultChannelStructure()
+		return sideBar.CheckAndJoinDefaultChannelStructure()
 
 	case "create_channels":
 		return team.CreateDefaultChannels()
@@ -95,7 +145,15 @@ func (p *AnchorPlugin) GetCommandResponse(_ *plugin.Context, commandLine string)
 		if user == nil {
 			return "Missing user name"
 		}
-		return user.DeleteAllSidebarCategories()
+		return sideBar.DeleteAllSidebarCategories()
+
+	case "reorder":
+
+		if sideBar == nil {
+			return "Missing user name"
+		}
+
+		return sideBar.ReorderSidebarCategories()
 
 	case "debug":
 
@@ -103,11 +161,7 @@ func (p *AnchorPlugin) GetCommandResponse(_ *plugin.Context, commandLine string)
 			return "Missing user name"
 		}
 
-		if user.C == nil {
-			return "BS"
-		}
-
-		actualCategories, err := user.SidebarCategoryNames()
+		actualCategories, err := sideBar.SidebarCategoryNames()
 		if err != nil {
 			return err.Error()
 		}

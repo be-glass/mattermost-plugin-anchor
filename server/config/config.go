@@ -1,5 +1,7 @@
 package config
 
+var CategoryOrder = []string{"Club Life", "Racing", "Cruising", "Fleet", "Training"}
+
 var PublicChannels = map[string][]string{
 	"Club Life": {"Town Square", "Club News", "Club House", "Crew Finder", "Market Place", "Car Pool", "Off-Topic"},
 	"Racing":    {"Monday Races", "Seven Bars", "Kaag Cup", "ESA Cup", "Arianes Cup", "Other Races"},
