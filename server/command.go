@@ -110,8 +110,15 @@ func (p *AnchorPlugin) GetCommandResponse(_ *plugin.Context, commandLine string)
 	switch command {
 
 	case "hello":
-		return fmt.Sprintf("Hello, %s! :) ",
-			c.User.GetFullName())
+		version, err := p.GetVersion()
+
+		if err != nil {
+
+		}
+
+		return fmt.Sprintf("Hello %s, this is anchor plugin version %s.",
+			c.User.GetFullName(), version,
+		)
 
 	case "users":
 		return business.GetUserListString(c)

@@ -369,6 +369,7 @@ func categoryChannelIDs(c *models.Context, categoryName string) ([]string, error
 }
 
 func (s *SideBar) ReorderSidebarCategories() string {
+	var dbg []string
 
 	s.c.API.LogDebug("XXXXX ReorderSidebarCategories", s.User.Username, s.c.Team.Id)
 
@@ -388,9 +389,14 @@ func (s *SideBar) ReorderSidebarCategories() string {
 
 		s.c.API.LogDebug("XXXXX Loop", category.DisplayName, len(orderedChannelIDs), index)
 
-		updatedCategory := newSidebarCategory(category, orderedChannelIDs, 23+2*index)
+		updatedCategory := newSidebarCategory(category, orderedChannelIDs, 10+10*index)
 		updatedCategories = append(updatedCategories, updatedCategory)
 	}
+
+	for _, category := range updatedCategories {
+		dbg = append(dbg, fmt.Sprintf("%s - %d", category.DisplayName, category.SortOrder))
+	}
+	dbg = append(dbg, "->>>")
 
 	if _, err := s.c.API.UpdateChannelSidebarCategories(s.User.Id, s.c.Team.Id, updatedCategories); err != nil {
 		return err.Error()
@@ -401,12 +407,8 @@ func (s *SideBar) ReorderSidebarCategories() string {
 		return err.Error()
 	}
 
-	var dbg []string
-
 	for _, category := range s.categories.Categories {
-
 		dbg = append(dbg, fmt.Sprintf("%s - %d", category.DisplayName, category.SortOrder))
-
 	}
 
 	return strings.Join(dbg, "\n")
@@ -469,8 +471,8 @@ func newSidebarCategory(m *model.SidebarCategoryWithChannels, orderedChannelIDs 
 			Id:          m.Id,
 			UserId:      m.UserId,
 			TeamId:      m.TeamId,
-			SortOrder:   int64(100 - 10*sortOrder), // Set SortOrder based on the sortOrder
-			Sorting:     m.Sorting,
+			SortOrder:   int64(sortOrder), // Set SortOrder based on the sortOrder
+			Sorting:     "manual",
 			Type:        m.Type,
 			DisplayName: m.DisplayName,
 			Muted:       m.Muted,
